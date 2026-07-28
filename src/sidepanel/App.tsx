@@ -77,6 +77,7 @@ const EMPTY_ANALYZER: AnalyzerReadout = {
   peakDb: -120,
   centroidHz: 0,
   rmsDb: -120,
+  spanSec: 0,
 }
 
 const ALL_MODES: { id: ModeId; label: string }[] = [
@@ -418,7 +419,11 @@ export function App() {
         {isCymatics ? (
           <CymaticsReadouts readout={cymaticsReadout} dim={dim} />
         ) : isAnalyzer ? (
-          <AnalyzerReadouts readout={analyzerReadout} dim={dim} />
+          <AnalyzerReadouts
+            readout={analyzerReadout}
+            dim={dim}
+            spectrogram={analyzer.view === 'spectrogram'}
+          />
         ) : (
           <ScopeReadouts readout={scopeReadout} settings={scope} dim={dim} />
         )}

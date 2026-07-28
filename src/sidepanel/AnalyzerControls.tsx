@@ -1,5 +1,8 @@
 import { formatHz } from '../lib/dsp'
 import {
+  MAX_HZ_OPTIONS,
+  MIN_HZ_OPTIONS,
+  SCROLL_RATES,
   SLOPES,
   type AnalyzerReadout,
   type AnalyzerSettings,
@@ -11,9 +14,11 @@ import { Group, Readout, Row, Segmented, Slider, Stepper } from '../ui/controls'
 export function AnalyzerReadouts({
   readout,
   dim,
+  spectrogram,
 }: {
   readout: AnalyzerReadout
   dim: boolean
+  spectrogram: boolean
 }) {
   return (
     <>
@@ -21,6 +26,9 @@ export function AnalyzerReadouts({
       <Readout label="Peak dB" value={readout.peakDb.toFixed(1)} dim={dim} />
       <Readout label="Centroid" value={formatHz(readout.centroidHz)} dim={dim} />
       <Readout label="RMS" value={`${readout.rmsDb.toFixed(1)} dB`} dim={dim} />
+      {spectrogram && (
+        <Readout label="Span" value={`${readout.spanSec.toFixed(1)} s`} dim={dim} />
+      )}
     </>
   )
 }
@@ -59,16 +67,32 @@ export function AnalyzerPanel({
             onChange={(slope) => patch({ slope })}
           />
         </Row>
-        <Row label="Averaging">
-          <Slider
-            label="Averaging"
-            value={settings.averaging}
-            min={0}
-            max={0.95}
-            step={0.05}
-            onChange={(averaging) => patch({ averaging })}
-          />
-        </Row>
+        {/* Averaging smooths the spectrum's release. A waterfall column is a
+            single moment by definition, so the control does not apply there and
+            is not shown rather than shown doing nothing. */}
+        {!isSpectrogram && (
+          <Row label="Averaging">
+            <Slider
+              label="Averaging"
+              value={settings.averaging}
+              min={0}
+              max={0.95}
+              step={0.05}
+              onChange={(averaging) => patch({ averaging })}
+            />
+          </Row>
+        )}
+        {isSpectrogram && (
+          <Row label="Scroll">
+            <Stepper
+              label="Scroll rate"
+              options={SCROLL_RATES}
+              value={settings.scrollRate as (typeof SCROLL_RATES)[number]}
+              format={(v) => `${v}/s`}
+              onChange={(scrollRate) => patch({ scrollRate })}
+            />
+          </Row>
+        )}
       </Group>
 
       <Group title="Range">
@@ -95,10 +119,21 @@ export function AnalyzerPanel({
         <Row label="Low Hz">
           <Stepper
             label="Lowest frequency"
-            options={[10, 20, 40, 80] as const}
-            value={settings.minHz as 10 | 20 | 40 | 80}
+            options={MIN_HZ_OPTIONS}
+            value={settings.minHz as (typeof MIN_HZ_OPTIONS)[number]}
             format={(v) => `${v} Hz`}
             onChange={(minHz) => patch({ minHz })}
+          />
+        </Row>
+        {/* Capped below Nyquist at render time, so a 24 kHz setting simply shows
+            everything the sample rate has. */}
+        <Row label="High Hz">
+          <Stepper
+            label="Highest frequency"
+            options={MAX_HZ_OPTIONS}
+            value={settings.maxHz as (typeof MAX_HZ_OPTIONS)[number]}
+            format={(v) => `${v / 1000} kHz`}
+            onChange={(maxHz) => patch({ maxHz })}
           />
         </Row>
       </Group>

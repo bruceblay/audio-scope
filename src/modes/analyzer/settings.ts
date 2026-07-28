@@ -24,6 +24,18 @@ export type ColorMap = 'phosphor' | 'magma'
  */
 export const SLOPES = [0, 3, 4.5, 6] as const
 
+export const MIN_HZ_OPTIONS = [10, 20, 40, 80] as const
+export const MAX_HZ_OPTIONS = [8000, 12000, 16000, 20000, 24000] as const
+
+/**
+ * Spectrogram scroll rate, columns per second.
+ *
+ * Time-based rather than one column per frame. Pushing per frame ties the time
+ * axis to the render loop, so a dropped frame silently stretches history and the
+ * display can no longer be read as time at all.
+ */
+export const SCROLL_RATES = [15, 30, 60, 120] as const
+
 export interface AnalyzerSettings {
   view: AnalyzerView
 
@@ -48,6 +60,8 @@ export interface AnalyzerSettings {
   bars: boolean
 
   map: ColorMap
+  /** Spectrogram columns per second. Sets how much time is on screen. */
+  scrollRate: number
 }
 
 export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
@@ -62,6 +76,7 @@ export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   peakDecay: 24,
   bars: false,
   map: 'phosphor',
+  scrollRate: 60,
 }
 
 export interface AnalyzerReadout {
@@ -78,4 +93,6 @@ export interface AnalyzerReadout {
   centroidHz: number
   /** Broadband level, for reference against the curve. */
   rmsDb: number
+  /** Seconds of history visible in the spectrogram. */
+  spanSec: number
 }
