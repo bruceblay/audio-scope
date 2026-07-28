@@ -209,10 +209,20 @@ from one image under one lighting condition.
 - **Concentric knobs.** A large outer control with a small inner vernier is the
   signature 2200 gesture, and it maps directly onto controls we already have that
   are coarse plus fine.
-- **Radial 1-2-5 scales.** Time/div and volts/div are printed *around* their
-  rotary switches. We already step through exactly those sequences; drawing them
-  as rotary switches with the scale around the dial would be the single biggest
-  authenticity win available.
+- ~~**Radial 1-2-5 scales.**~~ Built and rejected. Time/div and volts/div are
+  printed around rotary switches on the instrument, and we step through exactly
+  those sequences, so it looked like the obvious win. It was not.
+
+  A flat vector circle does not become a knob by being round. Real knobs read
+  through moulded shadow and specular highlight, and supplying those is precisely
+  the photographic skeuomorphism this theme is not allowed to use - so the honest
+  version looks like a cartoon. Twelve labels 27 degrees apart is also inherently
+  cramped in a 320 px column.
+
+  The part worth keeping is not the knob. It is that a printed scale shows *where
+  you are in the range* at a glance, which a stepper does not. If this is
+  revisited, take that and leave the circle: a flat silkscreened linear scale with
+  a position marker gets the same information across with no fake dimension.
 - ~~**Colored grouping bands.**~~ Tried and dropped. Tek bracketed related
   controls with thin colored strips, but in a narrow vertical column they read as
   web-app callouts rather than panel engraving. The seam between groups carries
