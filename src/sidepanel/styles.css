@@ -209,6 +209,29 @@ body {
   word-break: break-word;
 }
 
+/* -------------------------------------------------------------- meters -- */
+
+/* Sits directly under the stage, inside the same recess, so it reads as part of
+   the instrument rather than as a widget bolted underneath. */
+.meters {
+  flex: none;
+  margin: 0 10px 8px;
+  height: 46px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #050807;
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 -1px 0 var(--highlight);
+}
+
+.meters canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* ------------------------------------------------------------ readouts -- */
 
 .readouts {
@@ -755,4 +778,23 @@ body {
 
 :root[data-theme='tek'] ::selection {
   background: rgba(95, 139, 163, 0.35);
+}
+
+:root[data-theme='tek'] .meters {
+  margin: 0 12px 10px;
+  padding: 6px;
+  height: 58px;
+  border-radius: 4px;
+  background: linear-gradient(#9a978e, var(--bezel));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='tek'] .meters canvas {
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 2px var(--bezel-lip),
+    inset 0 2px 8px rgba(0, 0, 0, 0.75);
 }

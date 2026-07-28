@@ -1,3 +1,5 @@
+import type { MeterState } from './meters'
+
 /** Length of the time-domain record handed to the modes each frame. */
 export const TIME_SIZE = 4096
 
@@ -58,4 +60,13 @@ export interface AudioFrame {
   pitch: Pitch
   /** True when the input is below the noise gate. */
   silent: boolean
+
+  /** Per-channel RMS over the record, linear. */
+  rmsL: number
+  rmsR: number
+  /** Per-channel absolute peak over the record, linear. */
+  peakL: number
+  peakR: number
+  /** Level meters with real VU and PPM ballistics. See audio/meters.ts. */
+  meters: MeterState
 }

@@ -13,6 +13,7 @@
  */
 
 import { clamp, follow, linearToDb } from '../lib/dsp'
+import { Meters } from './meters'
 import { PitchDetector } from './pitch'
 import { BAND_COUNT, FFT_SIZE, TIME_SIZE, type AudioFrame, type Pitch } from './types'
 
@@ -30,6 +31,7 @@ export class AudioEngine {
   private outputGain: GainNode | null = null
 
   private readonly detector = new PitchDetector()
+  private readonly meters = new Meters()
 
   // --- Reused frame buffers ------------------------------------------------
   private readonly timeL = new Float32Array(TIME_SIZE)
@@ -65,6 +67,11 @@ export class AudioEngine {
     onset: 0,
     pitch: this.pitch,
     silent: true,
+    rmsL: 0,
+    rmsR: 0,
+    peakL: 0,
+    peakR: 0,
+    meters: this.meters.state,
   }
 
   // --- Follower state -----------------------------------------------------
@@ -84,6 +91,17 @@ export class AudioEngine {
 
   get isAttached() {
     return this.stream !== null
+  }
+
+  /**
+   * The most recent frame, without advancing anything.
+   *
+   * For readers that draw on their own loop, like the meter strip. Calling
+   * readFrame() from a second loop would step every follower and the frame delta
+   * twice per frame, running the meter ballistics at double rate.
+   */
+  get lastFrame(): AudioFrame {
+    return this.frame
   }
 
   get sampleRate() {
@@ -167,6 +185,7 @@ export class AudioEngine {
     this.slowLevel = 0
     this.onsetState = 0
     this.detector.reset()
+    this.meters.reset()
     this.resetFrame()
   }
 
@@ -221,6 +240,8 @@ export class AudioEngine {
     let sumLR = 0
     let sumLL = 0
     let sumRR = 0
+    let peakL = 0
+    let peakR = 0
     for (let i = 0; i < TIME_SIZE; i++) {
       const l = L[i]
       const r = R[i]
@@ -229,7 +250,13 @@ export class AudioEngine {
       sumSq += m * m
       const a = m < 0 ? -m : m
       if (a > peak) peak = a
+      const al = l < 0 ? -l : l
+      const ar = r < 0 ? -r : r
+      if (al > peakL) peakL = al
+      if (ar > peakR) peakR = ar
       sumLR += l * r
+      // sumLL and sumRR are the correlation denominators and the per-channel
+      // mean square at the same time, so the meters cost nothing extra here.
       sumLL += l * l
       sumRR += r * r
     }
@@ -241,6 +268,12 @@ export class AudioEngine {
     const denom = Math.sqrt(sumLL * sumRR)
     f.correlation = denom > 1e-9 ? clamp(sumLR / denom, -1, 1) : 0
     f.silent = rms < SILENCE_RMS
+
+    f.rmsL = Math.sqrt(sumLL / TIME_SIZE)
+    f.rmsR = Math.sqrt(sumRR / TIME_SIZE)
+    f.peakL = peakL
+    f.peakR = peakR
+    this.meters.update(f.rmsL, f.rmsR, peakL, peakR, f.dt)
 
     // Perceptual level: fast attack, slow release. browser-fx's technique, and
     // the reason its visualizer feels responsive without flickering.
@@ -288,6 +321,10 @@ export class AudioEngine {
     f.level = 0
     f.onset = 0
     f.silent = true
+    f.rmsL = 0
+    f.rmsR = 0
+    f.peakL = 0
+    f.peakR = 0
     this.pitch.hz = 0
     this.pitch.confidence = 0
     this.pitch.note = '--'

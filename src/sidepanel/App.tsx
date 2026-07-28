@@ -23,6 +23,7 @@ import {
   type ScopeReadout,
   type ScopeSettings,
 } from '../modes/scope/settings'
+import { Meters } from '../ui/Meters'
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
@@ -100,6 +101,7 @@ export function App() {
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
   const [showControls, setShowControls] = useState(true)
+  const [showMeters, setShowMeters] = useState(true)
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -293,6 +295,7 @@ export function App() {
         | Partial<{
             mode: ModeId
             theme: ThemeId
+            showMeters: boolean
             scope: ScopeSettings
             cymatics: CymaticsSettings
             analyzer: AnalyzerSettings
@@ -304,6 +307,7 @@ export function App() {
       // A profile that last used cymatics must not restore into a hidden mode.
       if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
       if (saved.theme) setTheme(saved.theme)
+      if (typeof saved.showMeters === 'boolean') setShowMeters(saved.showMeters)
       if (saved.scope) setScope((prev) => ({ ...prev, ...saved.scope }))
       if (saved.cymatics) setCymatics((prev) => ({ ...prev, ...saved.cymatics }))
       if (saved.analyzer) setAnalyzer((prev) => ({ ...prev, ...saved.analyzer }))
@@ -312,10 +316,11 @@ export function App() {
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      chrome.storage.sync.set({ [STORE_KEY]: { mode, theme, scope, cymatics, analyzer } }).catch(() => {})
+      chrome.storage.sync
+        .set({ [STORE_KEY]: { mode, theme, showMeters, scope, cymatics, analyzer } }).catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, theme, scope, cymatics, analyzer])
+  }, [mode, theme, showMeters, scope, cymatics, analyzer])
 
   const patchScope = useCallback(
     (next: Partial<ScopeSettings>) => setScope((prev) => ({ ...prev, ...next })),
@@ -415,6 +420,8 @@ export function App() {
         )}
       </Stage>
 
+      {showMeters && <Meters engine={engine} theme={theme} />}
+
       <div className="readouts">
         {isCymatics ? (
           <CymaticsReadouts readout={cymaticsReadout} dim={dim} />
@@ -439,6 +446,17 @@ export function App() {
           <ScopePanel settings={scope} patch={patchScope} />
         )}
         <Group title="Instrument">
+          <Row label="Meters">
+            <Segmented<'on' | 'off'>
+              label="Level meters"
+              value={showMeters ? 'on' : 'off'}
+              onChange={(v) => setShowMeters(v === 'on')}
+              options={[
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+              ]}
+            />
+          </Row>
           <Row label="Panel">
             <Segmented<ThemeId>
               label="Panel finish"

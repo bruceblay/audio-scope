@@ -75,7 +75,7 @@ export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   peakHold: true,
   peakDecay: 24,
   bars: false,
-  map: 'phosphor',
+  map: 'magma',
   scrollRate: 60,
 }
 
