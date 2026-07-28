@@ -36,11 +36,38 @@ export const phosphor: Record<PhosphorId, { core: string; bloom: string; label: 
   p1: { core: '#ffb340', bloom: '#ffe0b0', label: 'P1 AMBER', rgb: [255, 179, 64] },
 }
 
-export const scope = {
-  screen: '#050807',
-  graticule: 'rgba(150,190,210,0.13)',
-  graticuleMajor: 'rgba(150,190,210,0.22)',
-} as const
+export type ThemeId = 'dark' | 'tek'
+
+/**
+ * Canvas-side theme values. The CSS chrome mirrors these in styles.css; keep the
+ * two in step.
+ *
+ * The Tek screen is **not** blue. Reference photographs of a powered-off 2236
+ * show a blue-cyan face because an unlit CRT behind an anti-glare filter is
+ * reflecting the room. In use the face reads as a creamy dark grey-green, which
+ * is what this is. Lighter than the dark theme's near-black, warmer, and still
+ * dark enough that an emissive trace carries.
+ */
+export const screenTheme: Record<
+  ThemeId,
+  { screen: string; graticule: string; graticuleMajor: string; vignette: number }
+> = {
+  dark: {
+    screen: '#050807',
+    graticule: 'rgba(150,190,210,0.13)',
+    graticuleMajor: 'rgba(150,190,210,0.22)',
+    vignette: 0.55,
+  },
+  tek: {
+    screen: '#171b16',
+    // Warm grey-green rather than the dark theme's cool blue-white, matching an
+    // internal graticule lit by the scale illumination.
+    graticule: 'rgba(198,208,182,0.15)',
+    graticuleMajor: 'rgba(198,208,182,0.27)',
+    // A bench instrument under room light has far less falloff than a dark room.
+    vignette: 0.3,
+  },
+}
 
 export type CymaticPaletteId = 'slate' | 'ink'
 

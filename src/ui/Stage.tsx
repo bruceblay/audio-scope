@@ -5,6 +5,7 @@ import type { CymaticsReadout, CymaticsSettings } from '../modes/cymatics/settin
 import { ScopeRenderer } from '../modes/scope/renderer'
 import type { ScopeReadout, ScopeSettings } from '../modes/scope/settings'
 import type { Renderer } from '../modes/types'
+import type { ThemeId } from './tokens'
 
 export type ModeId = 'scope' | 'cymatics'
 
@@ -26,19 +27,23 @@ export function Stage({
   engine,
   mode,
   settings,
+  theme,
   onReadout,
   children,
 }: {
   engine: AudioEngine
   mode: ModeId
   settings: AnySettings
+  theme: ThemeId
   onReadout: (r: AnyReadout) => void
   children?: React.ReactNode
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const settingsRef = useRef(settings)
+  const themeRef = useRef(theme)
   const readoutRef = useRef(onReadout)
   settingsRef.current = settings
+  themeRef.current = theme
   readoutRef.current = onReadout
 
   useEffect(() => {
@@ -69,7 +74,7 @@ export function Stage({
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop)
       const frame = engine.readFrame(now)
-      renderer.render(frame, settingsRef.current)
+      renderer.render(frame, settingsRef.current, themeRef.current)
 
       if (now - lastPush > 100) {
         lastPush = now

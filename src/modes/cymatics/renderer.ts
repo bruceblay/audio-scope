@@ -8,7 +8,7 @@
  */
 
 import type { AudioFrame } from '../../audio/types'
-import { cymatic } from '../../ui/tokens'
+import { cymatic, type ThemeId } from '../../ui/tokens'
 import type { Renderer } from '../types'
 import { PlateField } from './plate'
 import { Sand } from './sand'
@@ -68,7 +68,10 @@ export class CymaticsRenderer implements Renderer<CymaticsSettings, CymaticsRead
     this.ctx.canvas.height = height
   }
 
-  render(frame: AudioFrame, s: CymaticsSettings) {
+  // Cymatics carries its own palette control (slate / ink), which is a separate
+  // choice from the chrome being light, so the app theme is deliberately unused
+  // here.
+  render(frame: AudioFrame, s: CymaticsSettings, _theme: ThemeId) {
     if (!this.w || !this.h) return
 
     this.sand.reset(s.grainCount, s.surface)

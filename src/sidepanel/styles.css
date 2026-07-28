@@ -528,3 +528,221 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================== BENCH THEME ==
+   Modeled on a Tektronix 2236, the 100 MHz analog scope from Tek's 2200 series.
+   See docs/06-design-system.md#planned-tektronix-light-mode.
+
+   Two rules this theme is built around:
+
+   1. A light panel does NOT mean a light screen. The CRT face stays dark and
+      recessed, because that is what makes an emissive trace read. Only the
+      chrome around it goes light.
+   2. Design language, not photograph. Palette, type, control grouping and the
+      recessed bezel are taken from the instrument. Rendered wrinkle paint,
+      photographic bevels and simulated wear are not.
+   ========================================================================== */
+
+:root[data-theme='tek'] {
+  /* The case blue, seen at the very edges as though the panel is set into it. */
+  --void: #4e7186;
+  /* Front panel: warm light grey, close to cream, clearly lighter than the case. */
+  --chassis: #d4d0c5;
+  --rail: #c7c3b7;
+  --control: #e3e0d7;
+  --raised: #efece4;
+  --line: #a7a396;
+  --hairline: rgba(255, 255, 255, 0.75);
+  --highlight: rgba(255, 255, 255, 0.7);
+
+  --text: #22241e;
+  --legend: #4b4e47;
+  --faint: #8a8c83;
+
+  --live: #2c7a4b;
+  --idle: #9b9d94;
+  --error: #a83232;
+
+  --tek-blue: #5f8ba3;
+  --tek-blue-deep: #436379;
+  --tek-red: #a83232;
+  --tek-green: #4d7d4a;
+  --bezel: #8d8a81;
+  --bezel-lip: #2e2f2b;
+}
+
+/* The instrument sits in its case rather than floating on a void. */
+:root[data-theme='tek'] body {
+  background: var(--void);
+}
+
+/* Mode tabs become the blue case band above the panel, with the wordmark
+   treatment Tek put along the top edge. */
+:root[data-theme='tek'] .tabs {
+  background: linear-gradient(var(--tek-blue), var(--tek-blue-deep));
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='tek'] .tab {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+:root[data-theme='tek'] .tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme='tek'] .tab[aria-selected='true'] {
+  color: #fff;
+}
+
+:root[data-theme='tek'] .tab[aria-selected='true']::after {
+  background: #fff;
+}
+
+:root[data-theme='tek'] .icon-btn {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme='tek'] .icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* The screen is set into a chunky grey bezel with a dark inner lip. This is the
+   most recognizable part of the instrument and the padding is what creates it -
+   the canvas shrinks to the content box and the bezel is the frame around it. */
+:root[data-theme='tek'] .stage {
+  margin: 12px 12px 10px;
+  padding: 9px;
+  border-radius: 5px;
+  background: linear-gradient(#9a978e, var(--bezel));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='tek'] .stage canvas {
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 2px var(--bezel-lip),
+    inset 0 2px 8px rgba(0, 0, 0, 0.75);
+}
+
+:root[data-theme='tek'] .stage-overlay {
+  background: rgba(23, 27, 22, 0.88);
+  margin: 9px;
+}
+
+/* Panel seams: a dark scribe line with light below, as between real panel
+   sections rather than the light-on-dark version the studio theme uses. */
+:root[data-theme='tek'] .seam {
+  background: linear-gradient(var(--line) 0 1px, rgba(255, 255, 255, 0.65) 1px 2px);
+}
+
+:root[data-theme='tek'] .readouts {
+  background: var(--rail);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme='tek'] .readout-value {
+  color: #1b1d17;
+}
+
+/* Colored bands bracketing each control group, the Tek front-panel convention. */
+:root[data-theme='tek'] .group {
+  border-left: 3px solid var(--tek-blue);
+  padding-left: 9px;
+}
+
+:root[data-theme='tek'] .group[data-accent='red'] {
+  border-left-color: var(--tek-red);
+}
+
+:root[data-theme='tek'] .group[data-accent='green'] {
+  border-left-color: var(--tek-green);
+}
+
+:root[data-theme='tek'] .group + .group {
+  border-top: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+/* Controls are raised light plastic: highlight on top, shadow beneath. */
+:root[data-theme='tek'] .stepper,
+:root[data-theme='tek'] .segmented {
+  background: linear-gradient(var(--raised), var(--control));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme='tek'] .stepper button,
+:root[data-theme='tek'] .segmented button {
+  color: #6a6d64;
+}
+
+:root[data-theme='tek'] .stepper button:hover:not(:disabled) {
+  background: #f6f4ee;
+  color: var(--text);
+}
+
+:root[data-theme='tek'] .stepper button:disabled {
+  color: #b5b2a8;
+}
+
+:root[data-theme='tek'] .stepper-value {
+  color: #1b1d17;
+  background: #f2efe7;
+}
+
+/* Red marks the engaged position. On the instrument that red is reserved for a
+   knob sitting in its calibrated detent, so it means "this is set", never
+   decoration. */
+:root[data-theme='tek'] .segmented button[aria-pressed='true'] {
+  background: linear-gradient(#f4f1ea, #e6e2d9);
+  color: var(--tek-red);
+  box-shadow: inset 0 -2px 0 var(--tek-red);
+}
+
+:root[data-theme='tek'] .slider::-webkit-slider-runnable-track {
+  background: #a7a396;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='tek'] .slider::-webkit-slider-thumb {
+  background: linear-gradient(#fbf9f4, #d3cfc4);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='tek'] .source {
+  background: linear-gradient(var(--rail), #bcb8ac);
+}
+
+:root[data-theme='tek'] .btn {
+  color: var(--text);
+  background: linear-gradient(var(--raised), var(--control));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme='tek'] .btn[data-variant='primary'] {
+  color: #fff;
+  background: linear-gradient(var(--tek-blue), var(--tek-blue-deep));
+}
+
+:root[data-theme='tek'] .controls {
+  background: var(--chassis);
+}
+
+:root[data-theme='tek'] ::-webkit-scrollbar-thumb {
+  background: #a7a396;
+  border-color: var(--chassis);
+}
+
+:root[data-theme='tek'] ::selection {
+  background: rgba(95, 139, 163, 0.35);
+}

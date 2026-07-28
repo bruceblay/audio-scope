@@ -1,8 +1,21 @@
 import type { ReactNode } from 'react'
 
-export function Group({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * `accent` paints a colored band down the left edge. Tektronix used thin colored
+ * strips to bracket related controls on the front panel; it does nothing in the
+ * dark theme and carries the grouping in the bench theme.
+ */
+export function Group({
+  title,
+  accent = 'blue',
+  children,
+}: {
+  title: string
+  accent?: 'blue' | 'red' | 'green'
+  children: ReactNode
+}) {
   return (
-    <section className="group">
+    <section className="group" data-accent={accent}>
       <div className="legend group-title">{title}</div>
       {children}
     </section>

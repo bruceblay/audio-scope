@@ -9,7 +9,7 @@
 
 import type { AudioFrame } from '../../audio/types'
 import { clamp, linearToDb } from '../../lib/dsp'
-import { phosphor, scope as scopeTokens } from '../../ui/tokens'
+import { phosphor, screenTheme, type ThemeId } from '../../ui/tokens'
 import type { Renderer } from '../types'
 import {
   DIV_X,
@@ -123,10 +123,11 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     this.gratKey = ''
   }
 
-  render(frame: AudioFrame, s: ScopeSettings) {
+  render(frame: AudioFrame, s: ScopeSettings, theme: ThemeId) {
     if (!this.w || !this.h || !this.persistCtx || !this.persist) return
 
     this.ensureColors(s)
+    const skin = screenTheme[theme]
 
     // --- Phosphor decay ---------------------------------------------------
     // 'destination-out' multiplies existing alpha by (1 - d) rather than
@@ -155,16 +156,16 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     // --- Compose the screen ----------------------------------------------
     const c = this.ctx
     c.globalCompositeOperation = 'source-over'
-    c.fillStyle = scopeTokens.screen
+    c.fillStyle = skin.screen
     c.fillRect(0, 0, this.w, this.h)
 
-    this.drawGraticule(s)
+    this.drawGraticule(s, theme)
     if (this.grat) c.drawImage(this.grat, 0, 0)
 
     c.drawImage(this.persist, 0, 0)
 
     this.drawTriggerMarker(s)
-    this.drawVignette()
+    this.drawVignette(skin.vignette)
   }
 
   readout(): ScopeReadout {
@@ -419,8 +420,9 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     }
   }
 
-  private drawGraticule(s: ScopeSettings) {
-    const key = `${this.w}x${this.h}:${s.graticuleBrightness}:${s.channel}`
+  private drawGraticule(s: ScopeSettings, theme: ThemeId) {
+    const skin = screenTheme[theme]
+    const key = `${this.w}x${this.h}:${s.graticuleBrightness}:${s.channel}:${theme}`
     if (this.gratKey === key && this.grat) return
     this.gratKey = key
 
@@ -435,13 +437,13 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     g.globalAlpha = alpha
 
     if (s.channel === 'xy') {
-      this.drawXYGraticule(g)
+      this.drawXYGraticule(g, skin)
       this.grat = cv
       return
     }
 
     // Division grid, 10 x 8.
-    g.strokeStyle = scopeTokens.graticule
+    g.strokeStyle = skin.graticule
     g.beginPath()
     for (let i = 1; i < DIV_X; i++) {
       const x = Math.round((i / DIV_X) * this.w) + 0.5
@@ -457,7 +459,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
 
     // Center axes are brighter, and carry the 0.2-division tick marks real
     // scopes use for rise-time measurement.
-    g.strokeStyle = scopeTokens.graticuleMajor
+    g.strokeStyle = skin.graticuleMajor
     g.beginPath()
     const cx = Math.round(this.w / 2) + 0.5
     const cy = Math.round(this.h / 2) + 0.5
@@ -496,13 +498,16 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
    * where out-of-phase content lies, so they are the reference the eye measures
    * against. Broadcast goniometers draw the same two lines.
    */
-  private drawXYGraticule(g: CanvasRenderingContext2D) {
+  private drawXYGraticule(
+    g: CanvasRenderingContext2D,
+    skin: (typeof screenTheme)[ThemeId],
+  ) {
     const size = Math.min(this.w, this.h)
     const ox = (this.w - size) / 2
     const oy = (this.h - size) / 2
     const step = size / DIV_Y
 
-    g.strokeStyle = scopeTokens.graticule
+    g.strokeStyle = skin.graticule
     g.beginPath()
     for (let i = 1; i < DIV_Y; i++) {
       const p = Math.round(ox + i * step) + 0.5
@@ -521,7 +526,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     // annotation rather than as part of the grid.
     g.save()
     g.setLineDash([3 * this.dpr, 4 * this.dpr])
-    g.strokeStyle = scopeTokens.graticule
+    g.strokeStyle = skin.graticule
     g.beginPath()
     g.moveTo(ox, oy + size)
     g.lineTo(ox + size, oy)
@@ -531,7 +536,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     g.restore()
 
     // Centre axes and the bounding box, brighter.
-    g.strokeStyle = scopeTokens.graticuleMajor
+    g.strokeStyle = skin.graticuleMajor
     g.beginPath()
     g.moveTo(cx, oy)
     g.lineTo(cx, oy + size)
@@ -572,7 +577,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   }
 
   /** Real CRT faces are not uniformly bright at the edges. */
-  private drawVignette() {
+  private drawVignette(strength: number) {
     const c = this.ctx
     const grad = c.createRadialGradient(
       this.w / 2,
@@ -583,7 +588,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       Math.max(this.w, this.h) * 0.72,
     )
     grad.addColorStop(0, 'rgba(0,0,0,0)')
-    grad.addColorStop(1, 'rgba(0,0,0,0.55)')
+    grad.addColorStop(1, `rgba(0,0,0,${strength})`)
     c.fillStyle = grad
     c.fillRect(0, 0, this.w, this.h)
   }

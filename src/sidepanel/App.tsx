@@ -19,6 +19,8 @@ import {
   type ScopeSettings,
 } from '../modes/scope/settings'
 import { Stage, type ModeId } from '../ui/Stage'
+import type { ThemeId } from '../ui/tokens'
+import { Group, Row, Segmented } from '../ui/controls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
 import { ScopePanel, ScopeReadouts } from './ScopeControls'
 
@@ -71,6 +73,7 @@ export function App() {
   const [showControls, setShowControls] = useState(true)
 
   const [mode, setMode] = useState<ModeId>('scope')
+  const [theme, setTheme] = useState<ThemeId>('dark')
   const [scope, setScope] = useState<ScopeSettings>(DEFAULT_SCOPE_SETTINGS)
   const [cymatics, setCymatics] = useState<CymaticsSettings>(DEFAULT_CYMATICS_SETTINGS)
   const [scopeReadout, setScopeReadout] = useState<ScopeReadout>(EMPTY_SCOPE)
@@ -233,12 +236,18 @@ export function App() {
       // chrome.storage returns `{}` typed values, and whatever was persisted may
       // be from an older shape, so nothing here is trusted without a check.
       const saved = stored?.[STORE_KEY] as
-        | Partial<{ mode: ModeId; scope: ScopeSettings; cymatics: CymaticsSettings }>
+        | Partial<{
+            mode: ModeId
+            theme: ThemeId
+            scope: ScopeSettings
+            cymatics: CymaticsSettings
+          }>
         | undefined
       if (!saved) return
       // Merge rather than replace, so settings added in a later version get
       // their defaults instead of arriving undefined.
       if (saved.mode) setMode(saved.mode)
+      if (saved.theme) setTheme(saved.theme)
       if (saved.scope) setScope((prev) => ({ ...prev, ...saved.scope }))
       if (saved.cymatics) setCymatics((prev) => ({ ...prev, ...saved.cymatics }))
     })
@@ -246,10 +255,10 @@ export function App() {
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      chrome.storage.sync.set({ [STORE_KEY]: { mode, scope, cymatics } }).catch(() => {})
+      chrome.storage.sync.set({ [STORE_KEY]: { mode, theme, scope, cymatics } }).catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, scope, cymatics])
+  }, [mode, theme, scope, cymatics])
 
   const patchScope = useCallback(
     (next: Partial<ScopeSettings>) => setScope((prev) => ({ ...prev, ...next })),
@@ -259,6 +268,12 @@ export function App() {
     (next: Partial<CymaticsSettings>) => setCymatics((prev) => ({ ...prev, ...next })),
     [],
   )
+
+  // The theme drives both the CSS chrome and the canvas, so it lives on the root
+  // element where the stylesheet can see it.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   const isCymatics = mode === 'cymatics'
   const dim = !connected
@@ -296,6 +311,7 @@ export function App() {
         engine={engine}
         mode={mode}
         settings={isCymatics ? cymatics : scope}
+        theme={theme}
         onReadout={
           isCymatics
             ? (r) => setCymaticsReadout(r as CymaticsReadout)
@@ -350,6 +366,19 @@ export function App() {
         ) : (
           <ScopePanel settings={scope} patch={patchScope} />
         )}
+        <Group title="Instrument" accent="green">
+          <Row label="Panel">
+            <Segmented<ThemeId>
+              label="Panel finish"
+              value={theme}
+              onChange={setTheme}
+              options={[
+                { value: 'dark', label: 'Studio' },
+                { value: 'tek', label: 'Bench' },
+              ]}
+            />
+          </Row>
+        </Group>
       </div>
 
       <div className="source">
