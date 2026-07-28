@@ -364,7 +364,7 @@ export function App() {
         {isCymatics ? (
           <CymaticsPanel settings={cymatics} patch={patchCymatics} />
         ) : (
-          <ScopePanel settings={scope} patch={patchScope} theme={theme} />
+          <ScopePanel settings={scope} patch={patchScope} />
         )}
         <Group title="Instrument">
           <Row label="Panel">
