@@ -21,19 +21,43 @@ as instrumentation rather than decoration.
 
 ## Type
 
-Two faces, no more.
+Two faces, both already on the machine. No downloads, so "zero outbound requests"
+holds without shipping woff2 subsets.
 
 | Role | Face | Usage |
 | --- | --- | --- |
-| **Labels** | Inter, 500/600 weight | `letter-spacing: 0.09em`, uppercase, 10-11 px. Front-panel legends. |
-| **Readouts** | JetBrains Mono, 400/500 | `font-variant-numeric: tabular-nums`. Non-negotiable: a value that reflows as digits change looks broken. |
+| **Legends** | Helvetica Neue / Helvetica / Arial | Uppercase, 11 px, weight 500, `letter-spacing: 0.005em`. |
+| **Section names** | same | Uppercase, 9.5 px, weight 700, `letter-spacing: 0.075em`. |
+| **Readouts** | system mono (SF Mono / Menlo / Consolas) | `font-variant-numeric: tabular-nums`. Non-negotiable: a value that reflows as digits change looks broken. |
 
-Both self-hosted as woff2 subsets in `public/fonts/`. browser-fx pulls Inter from
-Google Fonts (`src/fonts.css`), which works but adds a network request from an
-extension that otherwise makes none. Being able to say "zero outbound requests" is
-worth the ~40 KB.
+### Two mistakes worth not repeating
 
-Type scale, tight and small on purpose: 10 / 11 / 13 / 16 / 22 / 34. Instrument
+**The named font was never loaded.** The stack led with `'Inter'`, but nothing
+ever declared it - no `@font-face`, no `@import`, no woff2 in `public/`. Every
+render fell through to `-apple-system`, so the whole interface was set in SF Pro,
+the macOS system UI face. Naming a font is not loading one, and the fallback was
+silent.
+
+**Uppercase legends were letterspaced at `0.09em`.** Wide-tracked tiny caps read
+as "technical" on the web and are near-universal in generated dashboard UI. They
+are not how a panel is lettered: silkscreen is set tight. Combined with a system
+UI face at 10 px, that treatment is the single most generic thing the interface
+could have been doing, and it looked it.
+
+The fix was both at once - a real grotesque instead of the system UI font, and
+tracking dropped to almost nothing. Section names keep their tracking, because
+labelling a *region* is a different typographic job from labelling a control.
+
+### On the Tektronix reference
+
+Tek panels of the 1960s were set in **Futura** (confirmed against a 321A on the
+EEVblog forums); manual spines were Helvetica. By the 2236's mid-80s era the panel
+letterforms are grotesque rather than geometric, so Helvetica is the right family
+for the instrument we are referencing. Futura is also on every Mac - swapping the
+first entry in `--font-ui` gets the earlier, more geometric Tek character if that
+is ever wanted.
+
+Type scale, tight and small on purpose: 9.5 / 10.5 / 11 / 13 / 16 / 22. Instrument
 labels are small. Large text reads as a web app.
 
 ## Tokens
