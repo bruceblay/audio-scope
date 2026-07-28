@@ -54,10 +54,24 @@ const EMPTY_CYMATICS: CymaticsReadout = {
   grains: 0,
 }
 
-const MODES: { id: ModeId; label: string }[] = [
+/**
+ * Cymatics is hidden, not removed.
+ *
+ * Its physics is verified - free-edge plate eigenvalues match Leissa, the sand
+ * transport is measured in test/sand.test.ts - but verified is not the same as
+ * good-looking, and the visual result is not up to standard yet. The code stays
+ * so the work is not lost; flip this to bring the tab back.
+ *
+ * Where to pick it up is written down in docs/07-plan.md, Phase 4.
+ */
+const SHOW_CYMATICS = false
+
+const ALL_MODES: { id: ModeId; label: string }[] = [
   { id: 'scope', label: 'Oscilloscope' },
   { id: 'cymatics', label: 'Cymatics' },
 ]
+
+const MODES = ALL_MODES.filter((m) => m.id !== 'cymatics' || SHOW_CYMATICS)
 
 export function App() {
   // One engine for the life of the panel. Created here rather than in an effect
@@ -246,7 +260,8 @@ export function App() {
       if (!saved) return
       // Merge rather than replace, so settings added in a later version get
       // their defaults instead of arriving undefined.
-      if (saved.mode) setMode(saved.mode)
+      // A profile that last used cymatics must not restore into a hidden mode.
+      if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
       if (saved.theme) setTheme(saved.theme)
       if (saved.scope) setScope((prev) => ({ ...prev, ...saved.scope }))
       if (saved.cymatics) setCymatics((prev) => ({ ...prev, ...saved.cymatics }))
