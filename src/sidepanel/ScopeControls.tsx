@@ -96,7 +96,7 @@ export function ScopePanel({
       </Group>
 
       {isXY && (
-        <Group title="Beam" accent="green">
+        <Group title="Beam">
           {/* Exposure is the X-Y equivalent of a time base. The full record is
               85 ms at 48 kHz, which drawn all at once reads as lag and scribble.
               Shorter is more current and cleaner; persistence supplies the tail. */}
@@ -147,7 +147,7 @@ export function ScopePanel({
       )}
 
       {!isXY && (
-        <Group title="Trigger" accent="red">
+        <Group title="Trigger">
           <Row label="Mode">
             <Segmented<TriggerMode>
               label="Trigger mode"
@@ -208,7 +208,7 @@ export function ScopePanel({
         </Group>
       )}
 
-      <Group title="Display" accent="green">
+      <Group title="Display">
         <Row label="Phosphor">
           <Segmented<PhosphorId>
             label="Phosphor"

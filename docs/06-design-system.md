@@ -213,9 +213,12 @@ from one image under one lighting condition.
   rotary switches. We already step through exactly those sequences; drawing them
   as rotary switches with the scale around the dial would be the single biggest
   authenticity win available.
-- **Colored grouping bands.** Tek used thin colored strips to bracket related
-  controls. Our control groups are already Vertical / Horizontal / Trigger /
-  Display, so the structure is there.
+- ~~**Colored grouping bands.**~~ Tried and dropped. Tek bracketed related
+  controls with thin colored strips, but in a narrow vertical column they read as
+  web-app callouts rather than panel engraving. The seam between groups carries
+  the separation on its own. Worth revisiting only if the layout ever goes wide
+  enough to hold several columns, which is the arrangement the bands were
+  designed for.
 - **Red on the calibrated detent.** A single saturated accent used only where
   something is in a calibrated position, not for decoration.
 

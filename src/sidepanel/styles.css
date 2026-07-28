@@ -566,7 +566,6 @@ body {
   --tek-blue: #5f8ba3;
   --tek-blue-deep: #436379;
   --tek-red: #a83232;
-  --tek-green: #4d7d4a;
   --bezel: #8d8a81;
   --bezel-lip: #2e2f2b;
 }
@@ -649,20 +648,9 @@ body {
   color: #1b1d17;
 }
 
-/* Colored bands bracketing each control group, the Tek front-panel convention. */
-:root[data-theme='tek'] .group {
-  border-left: 3px solid var(--tek-blue);
-  padding-left: 9px;
-}
-
-:root[data-theme='tek'] .group[data-accent='red'] {
-  border-left-color: var(--tek-red);
-}
-
-:root[data-theme='tek'] .group[data-accent='green'] {
-  border-left-color: var(--tek-green);
-}
-
+/* Group separation is carried by the seam alone. Tek bracketed related controls
+   with colored bands on the front panel, and it was tried here, but in a narrow
+   vertical column it reads as web-app callouts rather than panel engraving. */
 :root[data-theme='tek'] .group + .group {
   border-top: 1px solid var(--line);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;

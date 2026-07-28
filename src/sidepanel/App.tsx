@@ -366,7 +366,7 @@ export function App() {
         ) : (
           <ScopePanel settings={scope} patch={patchScope} />
         )}
-        <Group title="Instrument" accent="green">
+        <Group title="Instrument">
           <Row label="Panel">
             <Segmented<ThemeId>
               label="Panel finish"
