@@ -344,6 +344,32 @@ console.log('\n--- SMOOTHING: constant-Q, and it actually smooths ---')
     check('off is a true bypass', before.every((v, i) => v === a[i]), 'curve untouched at fraction 0')
   }
 
+  // The curve is smoothed in place and fed back through a recursive follower, so
+  // anything non-finite that gets in stays forever. Every degenerate input has to
+  // leave the data alone rather than half-process it.
+  {
+    let survived = true
+    const cases: [string, unknown[]][] = [
+      ['undefined fraction', [undefined, MIN, TOP]],
+      ['NaN fraction', [NaN, MIN, TOP]],
+      ['negative fraction', [-6, MIN, TOP]],
+      ['inverted range', [6, TOP, MIN]],
+      ['zero-width range', [6, 1000, 1000]],
+      ['NaN range', [6, MIN, NaN]],
+    ]
+    for (const [label, args] of cases) {
+      const a = noisy()
+      const before = Array.from(a)
+      smoothOctaves(a, new Float32Array(N), N, args[0] as number, args[1] as number, args[2] as number)
+      const ok = before.every((v, i) => v === a[i])
+      if (!ok) {
+        survived = false
+        check(`degenerate input: ${label}`, false, 'curve was modified')
+      }
+    }
+    check('degenerate inputs leave the curve alone', survived, `${cases.length} cases, all bypassed`)
+  }
+
   // Constant-Q: the window is a fixed width in log frequency, which on a log
   // axis means a fixed pixel width rather than a fixed number of hertz.
   //

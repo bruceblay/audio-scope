@@ -201,14 +201,22 @@ export function smoothOctaves(
   minHz: number,
   maxHz: number,
 ) {
-  if (fraction <= 0 || n < 3) return
+  // Guard every degenerate input, because this filter is applied in place to a
+  // recursively smoothed array: one non-finite value entering it never leaves.
+  // With `fraction` undefined the old code sailed past `fraction <= 0` (false for
+  // NaN), produced a zero-length kernel, and wrote silence over the whole curve
+  // as a flat 0 dB line.
+  if (!Number.isFinite(fraction) || fraction <= 0 || n < 3) return
+  if (!Number.isFinite(minHz) || !Number.isFinite(maxHz) || maxHz <= minHz) return
 
   const pixelsPerOctave = n / Math.log2(maxHz / minHz)
   // Equivalent rectangular width of a Gaussian is sigma·sqrt(2·pi), so this
   // makes "1/N octave" mean a window that genuinely averages over 1/N octave.
   const width = pixelsPerOctave / fraction
   const sigma = width / Math.sqrt(2 * Math.PI)
-  if (sigma < 0.35) return // narrower than a pixel; nothing to do
+  // Below about a third of a pixel there is nothing to average; above a quarter
+  // of the display the kernel is larger than the data it is smoothing.
+  if (!Number.isFinite(sigma) || sigma < 0.35 || sigma > n / 4) return
 
   const kernel = gaussianKernel(sigma)
   const radius = (kernel.length - 1) / 2
