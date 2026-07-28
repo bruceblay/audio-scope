@@ -196,6 +196,78 @@ picking it back up:
 Recorded so they are not lost. Neither is specified yet - the ambiguities below
 should be settled with Bruce before building, not guessed at.
 
+### Analyzer mode (the cymatics slot)
+
+Cymatics is hidden, freeing the second mode slot. Candidates below, grouped by
+what they actually measure, with a note on which are real standardized
+instruments and which are only decoration wearing an instrument's clothes.
+
+**Frequency domain**
+
+| | What it is | Real? |
+| --- | --- | --- |
+| **Spectrum analyzer** | Magnitude vs frequency, bars or a curve, log frequency axis | Yes |
+| **RTA, 1/3-octave** | Same, but in standardized octave-fraction bands rather than raw FFT bins | Yes, IEC 61260 |
+| **Spectrogram / waterfall** | Time x frequency, magnitude as colour. The heat map | Yes |
+| **Chromagram** | Twelve bins, one per pitch class, folded across octaves | Yes, and musically legible |
+| **Mel / Bark spectrum** | Perceptually spaced bands rather than linear ones | Yes |
+
+**Level**
+
+| | What it is | Real? |
+| --- | --- | --- |
+| **VU meter** | Averaged level with defined ballistics | Only if the ballistics are real - see below |
+| **PPM** | Peak programme meter, fast attack, slow decay | Yes, DIN/BBC/Nordic variants |
+| **LUFS / loudness** | Gated loudness with K-weighting | Yes, ITU-R BS.1770 / EBU R128 |
+| **Peak + RMS pair** | Instantaneous against averaged, the DAW convention | Yes |
+
+**Stereo**
+
+| | What it is | Real? |
+| --- | --- | --- |
+| **Goniometer** | X-Y with mono and out-of-phase references | Built, it is the scope's X-Y mode |
+| **Correlation meter** | Single -1..+1 readout of phase agreement | Computed already, not yet drawn |
+| **Mid/Side balance** | Level of the sum against the difference | Yes |
+
+#### What the engine already provides
+
+Most of this is close to free. `AudioFrame` already carries `spectrum` (4096
+bins, dBFS), `bands` (24 log-spaced), `rms`, `peak`, `crest` and `correlation`,
+all computed in a single pass. A spectrum analyzer is essentially a renderer over
+data that already exists. A spectrogram additionally needs a scrolling history
+buffer, which is the only real new machinery in the list.
+
+#### Recommended structure
+
+Not all three in one selector. Two of them belong together and one does not:
+
+- **Analyzer mode**, with a Spectrum / Spectrogram selector. These share the FFT
+  and the same frequency axis - a spectrogram *is* the spectrum over time - so
+  switching between them reads as changing the time window, not as changing
+  instruments.
+- **Meters as a persistent strip**, not a mode. Level and correlation are things
+  you want visible *while* watching something else. Making them a mode means you
+  cannot see them with the scope running, which is backwards. The readout row is
+  already the right place.
+
+#### Where these usually stop being real
+
+Worth stating, since it is the whole premise of the project:
+
+- **A "VU meter" is usually a peak meter with a needle drawn on it.** A real VU
+  has defined ballistics: 300 ms to reach 99% on a 1 kHz tone, and a symmetric
+  decay. That integration time is the entire character of the instrument - it is
+  why VU reads loudness and PPM reads peaks, and why they disagree. Drawing a
+  needle on an instantaneous peak value is the fake version.
+- **An RTA on raw FFT bins is not an RTA.** FFT bins are linear in frequency;
+  octave-fraction bands are logarithmic and standardized. Binning FFT output into
+  approximate bands is fine and cheap, but it should be labelled as what it is.
+- **Rainbow colormaps invent structure.** A spectrogram's colour scale should be
+  perceptually uniform (viridis, magma, or a single-hue ramp). Rainbow scales have
+  bright bands at yellow and cyan that read as features in the data which are not
+  there. This is a well-documented failure and it is exactly the kind of
+  dishonesty this project avoids elsewhere.
+
 ### Built-in signal generator
 
 A rudimentary synth, both as a feature and as test equipment. It is probably the
