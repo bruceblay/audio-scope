@@ -36,6 +36,43 @@ import { ScopePanel, ScopeReadouts } from './ScopeControls'
 // would otherwise never be seen.
 const STORE_KEY = 'settings.v2'
 
+/**
+ * The defaults in force right now. Persisted alongside the user's settings so a
+ * later default change can actually reach them.
+ */
+const DEFAULTS = {
+  showMeters: false,
+  scope: DEFAULT_SCOPE_SETTINGS,
+  cymatics: DEFAULT_CYMATICS_SETTINGS,
+  analyzer: DEFAULT_ANALYZER_SETTINGS,
+}
+
+/**
+ * Three-way merge: keep what the user chose, adopt new defaults for what they
+ * did not.
+ *
+ * A plain `{...defaults, ...saved}` means a stored value always wins, so
+ * changing a default has no effect on anyone who has ever opened the panel -
+ * which is everyone. That bit twice in a row here. Comparing each stored value
+ * against the default that was in force when it was saved separates "the user
+ * picked this" from "this was simply the default at the time", and only the
+ * former is preserved.
+ *
+ * The alternative, bumping the storage key, throws away every unrelated
+ * preference to change one.
+ */
+function adopt<T extends object>(current: T, saved?: Partial<T>, savedDefaults?: Partial<T>): T {
+  if (!saved) return current
+  const out = { ...current }
+  for (const key of Object.keys(current) as (keyof T)[]) {
+    if (!(key in saved)) continue
+    const untouched =
+      savedDefaults !== undefined && key in savedDefaults && saved[key] === savedDefaults[key]
+    if (!untouched) out[key] = saved[key] as T[typeof key]
+  }
+  return out
+}
+
 const EMPTY_SCOPE: ScopeReadout = {
   vpp: 0,
   vrms: 0,
@@ -101,7 +138,7 @@ export function App() {
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
   const [showControls, setShowControls] = useState(true)
-  const [showMeters, setShowMeters] = useState(true)
+  const [showMeters, setShowMeters] = useState(DEFAULTS.showMeters)
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -299,18 +336,20 @@ export function App() {
             scope: ScopeSettings
             cymatics: CymaticsSettings
             analyzer: AnalyzerSettings
+            defaults: typeof DEFAULTS
           }>
         | undefined
       if (!saved) return
-      // Merge rather than replace, so settings added in a later version get
-      // their defaults instead of arriving undefined.
+      const was = saved.defaults
       // A profile that last used cymatics must not restore into a hidden mode.
       if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
       if (saved.theme) setTheme(saved.theme)
-      if (typeof saved.showMeters === 'boolean') setShowMeters(saved.showMeters)
-      if (saved.scope) setScope((prev) => ({ ...prev, ...saved.scope }))
-      if (saved.cymatics) setCymatics((prev) => ({ ...prev, ...saved.cymatics }))
-      if (saved.analyzer) setAnalyzer((prev) => ({ ...prev, ...saved.analyzer }))
+      if (typeof saved.showMeters === 'boolean' && saved.showMeters !== was?.showMeters) {
+        setShowMeters(saved.showMeters)
+      }
+      setScope((prev) => adopt(prev, saved.scope, was?.scope))
+      setCymatics((prev) => adopt(prev, saved.cymatics, was?.cymatics))
+      setAnalyzer((prev) => adopt(prev, saved.analyzer, was?.analyzer))
     })
   }, [])
 
