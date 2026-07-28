@@ -314,11 +314,17 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     this.ensureBands(s)
     const c = this.ctx
     const [r, g, b] = phosphor.p31.rgb
+    const [br, bg, bb] = hexToRgb(phosphor.p31.bloom)
     const gap = Math.max(1, Math.round(this.dpr))
+    const capH = Math.max(1, Math.round(1.5 * this.dpr))
 
+    // The gradient is anchored to the canvas, not to each bar, so a quiet bar
+    // sits entirely in its lower end. Running it from 0.92 down to 0.28 meant
+    // most of most bars was nearly transparent. It now stays substantial the
+    // whole way down and only varies enough to give the bars some body.
     const grad = c.createLinearGradient(0, 0, 0, this.h)
-    grad.addColorStop(0, `rgba(${r},${g},${b},0.92)`)
-    grad.addColorStop(1, `rgba(${r},${g},${b},0.28)`)
+    grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`)
+    grad.addColorStop(1, `rgba(${r},${g},${b},0.7)`)
 
     for (const band of this.bands) {
       const x0 = this.tFor(Math.max(band.lo, s.minHz), s) * this.w
@@ -340,9 +346,18 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
       c.fillStyle = grad
       c.fillRect(x0, y, width, this.h - y)
 
+      // Bright cap on the top edge. Gives each bar a defined top rather than
+      // fading out, which is what makes a bar read as a bar.
+      if (this.h - y > capH) {
+        c.fillStyle = `rgba(${br},${bg},${bb},0.9)`
+        c.fillRect(x0, y, width, capH)
+      }
+
       if (s.peakHold && peak > s.floorDb) {
         const py = this.yFor(peak, s)
-        c.fillStyle = `rgba(${r},${g},${b},0.85)`
+        // Bloom colour and detached from the cap, so the held peak is not
+        // mistaken for the bar's own top.
+        c.fillStyle = `rgba(${br},${bg},${bb},0.55)`
         c.fillRect(x0, py - this.dpr, width, Math.max(1, this.dpr))
       }
     }
