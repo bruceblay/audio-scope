@@ -10,6 +10,8 @@ import {
   type TriggerSlope,
 } from '../modes/scope/settings'
 import { Group, Readout, Row, Segmented, Slider, Stepper } from '../ui/controls'
+import { RotarySwitch } from '../ui/RotarySwitch'
+import type { ThemeId } from '../ui/tokens'
 import { phosphor, type PhosphorId } from '../ui/tokens'
 
 export function ScopeReadouts({
@@ -48,16 +50,59 @@ export function ScopeReadouts({
   )
 }
 
+/**
+ * Dial tokens: short enough to print around a knob without colliding. Real
+ * instruments do the same, carrying the unit in an arc label rather than
+ * repeating it at every position.
+ */
+const timeTick = (v: number) =>
+  v < 1e-3 ? `${Math.round(v * 1e6)}\u00b5` : `${+(v * 1e3).toPrecision(2)}m`
+
+const voltTick = (v: number) =>
+  v < 0.1 ? `${Math.round(v * 1000)}m` : v < 1 ? `.${Math.round(v * 10)}` : `${v}`
+
+const voltFormat = (v: number) =>
+  v < 1 ? `${(v * 1000).toFixed(0)} mFS` : `${v.toFixed(0)} FS`
+
 export function ScopePanel({
   settings,
   patch,
+  theme,
 }: {
   settings: ScopeSettings
   patch: (next: Partial<ScopeSettings>) => void
+  theme: ThemeId
 }) {
   const isXY = settings.channel === 'xy'
+  // Rotaries are the bench-panel control. Studio keeps the compact steppers,
+  // which suit a quiet dark panel better and take a third of the height.
+  const dials = theme === 'tek'
   return (
     <>
+      {dials && (
+        <Group title="Deflection">
+          <div className="rotaries">
+            <RotarySwitch
+              label="VOLTS/DIV"
+              options={VOLTS_PER_DIV}
+              value={settings.voltsPerDiv}
+              tick={voltTick}
+              format={voltFormat}
+              onChange={(voltsPerDiv) => patch({ voltsPerDiv })}
+            />
+            {!isXY && (
+              <RotarySwitch
+                label="TIME/DIV"
+                options={TIME_PER_DIV}
+                value={settings.timePerDiv}
+                tick={timeTick}
+                format={formatSeconds}
+                onChange={(timePerDiv) => patch({ timePerDiv })}
+              />
+            )}
+          </div>
+        </Group>
+      )}
       <Group title="Vertical">
         <Row label="Channel">
           <Segmented<Channel>
@@ -72,15 +117,17 @@ export function ScopePanel({
             ]}
           />
         </Row>
-        <Row label="Volts / div">
-          <Stepper
-            label="Volts per division"
-            options={VOLTS_PER_DIV}
-            value={settings.voltsPerDiv}
-            format={(v) => (v < 1 ? `${(v * 1000).toFixed(0)} mFS` : `${v.toFixed(0)} FS`)}
-            onChange={(voltsPerDiv) => patch({ voltsPerDiv })}
-          />
-        </Row>
+        {!dials && (
+          <Row label="Volts / div">
+            <Stepper
+              label="Volts per division"
+              options={VOLTS_PER_DIV}
+              value={settings.voltsPerDiv}
+              format={voltFormat}
+              onChange={(voltsPerDiv) => patch({ voltsPerDiv })}
+            />
+          </Row>
+        )}
         {!isXY && (
           <Row label="Position">
             <Slider
@@ -124,15 +171,17 @@ export function ScopePanel({
 
       {!isXY && (
         <Group title="Horizontal">
-          <Row label="Time / div">
-            <Stepper
-              label="Time per division"
-              options={TIME_PER_DIV}
-              value={settings.timePerDiv}
-              format={formatSeconds}
-              onChange={(timePerDiv) => patch({ timePerDiv })}
-            />
-          </Row>
+          {!dials && (
+            <Row label="Time / div">
+              <Stepper
+                label="Time per division"
+                options={TIME_PER_DIV}
+                value={settings.timePerDiv}
+                format={formatSeconds}
+                onChange={(timePerDiv) => patch({ timePerDiv })}
+              />
+            </Row>
+          )}
           <Row label="Trigger pos">
             <Slider
               label="Trigger position"
