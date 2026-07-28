@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CaptureError,
   acquireTabStream,
@@ -153,7 +153,16 @@ export function App() {
               recoverable: false,
             },
       )
-      console.error('[audio-scope] connect failed:', err)
+      if (isInvocationError(err)) {
+        // Expected whenever the target tab has no activeTab grant: it navigated,
+        // or it was never the tab the toolbar icon was clicked on. Recoverable
+        // and self-explaining in the UI, so it is not an error-level event.
+        console.info(
+          '[audio-scope] no capture rights on this tab yet - click the toolbar icon on it',
+        )
+      } else {
+        console.error('[audio-scope] connect failed:', err)
+      }
       disconnect()
     } finally {
       setConnecting(false)
@@ -217,6 +226,17 @@ export function App() {
   // Clicking the toolbar icon mints a fresh grant, and the worker leaves a note
   // in session storage. Consuming it here turns that single click into a full
   // reconnect with no second step.
+  //
+  // Held in a ref rather than listed as a dependency. `connect` closes over
+  // `target`, and `target` changes whenever the panel follows the active tab -
+  // which includes the instant the side panel opens and takes focus. Depending on
+  // it tore this effect down and rebuilt it exactly when the note arrived: the
+  // in-flight read would remove the note, then bail on the cancel flag, and the
+  // auto-connect silently never happened. The user then pressed Connect against
+  // whatever tab was now in front, which usually had no grant.
+  const connectRef = useRef(connect)
+  connectRef.current = connect
+
   useEffect(() => {
     let cancelled = false
 
@@ -229,9 +249,12 @@ export function App() {
       // Stale notes are ignored, so reopening the panel later does not silently
       // start capturing a tab the user has moved on from.
       if (Date.now() - invocation.at > 15000) return
+      // Only consume the note once it is certain to be used. Removing it first
+      // and then bailing throws away the one thing that makes recovery work.
+      if (engine.isAttached) return
       await chrome.storage.session.remove('invocation')
-      if (cancelled || engine.isAttached) return
-      void connect(invocation.tabId)
+      if (cancelled) return
+      void connectRef.current(invocation.tabId)
     }
 
     const onMessage = (message: { type?: string }) => {
@@ -244,7 +267,7 @@ export function App() {
       cancelled = true
       chrome.runtime.onMessage.removeListener(onMessage)
     }
-  }, [connect, engine])
+  }, [engine])
 
   // Release the AudioContext for good when the panel unmounts.
   useEffect(() => () => void engine.dispose(), [engine])
