@@ -41,19 +41,17 @@ export function Stage({
   children?: React.ReactNode
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const settingsRef = useRef(settings)
-  const themeRef = useRef(theme)
+  // Mode travels with the settings, in one ref, so the loop can tell whether the
+  // settings it is about to hand over belong to the renderer it is holding.
+  const stateRef = useRef({ mode, settings, theme })
   const readoutRef = useRef(onReadout)
-  settingsRef.current = settings
-  themeRef.current = theme
+  stateRef.current = { mode, settings, theme }
   readoutRef.current = onReadout
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // App passes the settings object matching `mode`, and both change in the
-    // same render, so the renderer never sees the other mode's shape.
     const renderer: Renderer<AnySettings, AnyReadout> = (
       mode === 'cymatics'
         ? new CymaticsRenderer(canvas)
@@ -79,8 +77,20 @@ export function Stage({
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop)
+      // Keep the timeline advancing even on a skipped frame, so the followers
+      // and frame delta stay continuous.
       const frame = engine.readFrame(now)
-      renderer.render(frame, settingsRef.current, themeRef.current)
+
+      const state = stateRef.current
+      // Mode changes reach the refs during render, but this renderer is only
+      // replaced later, when the effect re-runs. A frame scheduled in between
+      // would hand one renderer the other mode's settings - which is how the
+      // scope came to look up phosphor[undefined] and crash on switching modes.
+      // The settings and the renderer have to agree, and only the mode tag says
+      // whether they do.
+      if (state.mode !== mode) return
+
+      renderer.render(frame, state.settings, state.theme)
 
       if (now - lastPush > 100) {
         lastPush = now
