@@ -1,0 +1,36 @@
+{
+  "name": "audio-scope",
+  "displayName": "Audio Scope",
+  "version": "0.1.0",
+  "description": "A real oscilloscope and cymatic plate for any browser tab. Triggered time-domain scope with CRT phosphor rendering, plus a physically simulated Chladni plate driven by detected pitch.",
+  "author": "Bruce Blay <bruceblay@gmail.com>",
+  "license": "ISC",
+  "private": true,
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:dsp && npm run test:cymatics && npm run test:sand",
+    "test:dsp": "esbuild test/dsp.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/dsp.test.mjs && node node_modules/.cache/dsp.test.mjs",
+    "test:cymatics": "esbuild test/cymatics.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/cymatics.test.mjs && node node_modules/.cache/cymatics.test.mjs",
+    "test:sand": "esbuild test/sand.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/sand.test.mjs && node node_modules/.cache/sand.test.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.2.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
+  }
+}

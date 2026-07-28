@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Audio Scope",
+  "version": "0.1.0",
+  "description": "A real oscilloscope and cymatic plate for any tab. Triggered CRT scope + physically simulated Chladni plate.",
+  "minimum_chrome_version": "116",
+  "permissions": ["tabCapture", "sidePanel", "storage", "activeTab"],
+  "action": {
+    "default_title": "Open Audio Scope"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
