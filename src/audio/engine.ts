@@ -28,6 +28,7 @@ export class AudioEngine {
   private analyserL: AnalyserNode | null = null
   private analyserR: AnalyserNode | null = null
   private analyserFFT: AnalyserNode | null = null
+  private analyserShort: AnalyserNode | null = null
   private outputGain: GainNode | null = null
 
   private readonly detector = new PitchDetector()
@@ -38,6 +39,8 @@ export class AudioEngine {
   private readonly timeR = new Float32Array(TIME_SIZE)
   private readonly timeMono = new Float32Array(TIME_SIZE)
   private readonly spectrum = new Float32Array(FFT_SIZE / 2)
+  private shortSize = 2048
+  private shortSpectrum = new Float32Array(1024)
   private readonly bands = new Float32Array(BAND_COUNT)
   private readonly bandEdges = new Int32Array(BAND_COUNT + 1)
 
@@ -58,6 +61,7 @@ export class AudioEngine {
     timeR: this.timeR,
     timeMono: this.timeMono,
     spectrum: this.spectrum,
+    spectrumShort: this.shortSpectrum,
     bands: this.bands,
     rms: 0,
     peak: 0,
@@ -145,6 +149,9 @@ export class AudioEngine {
     this.analyserFFT = makeAnalyser(ctx, FFT_SIZE)
     this.source.connect(this.analyserFFT)
 
+    this.analyserShort = makeAnalyser(ctx, this.shortSize)
+    this.source.connect(this.analyserShort)
+
     this.frame.sampleRate = ctx.sampleRate
     this.lastTime = 0
     this.detector.reset()
@@ -166,6 +173,7 @@ export class AudioEngine {
       this.analyserL,
       this.analyserR,
       this.analyserFFT,
+      this.analyserShort,
       this.outputGain,
     ]) {
       try {
@@ -179,6 +187,7 @@ export class AudioEngine {
     this.analyserL = null
     this.analyserR = null
     this.analyserFFT = null
+    this.analyserShort = null
     this.outputGain = null
 
     this.levelState = 0
@@ -201,6 +210,22 @@ export class AudioEngine {
         // A context that is already closed throws. Harmless.
       }
     }
+  }
+
+  /**
+   * Resize the short-window analyser.
+   *
+   * Directly trades latency against low-frequency detail: 8192 points is a
+   * 171 ms window with 5.9 Hz bins, 1024 is 21 ms with 47 Hz bins. Cheap to
+   * change, so it can be a user control.
+   */
+  setShortFftSize(size: number) {
+    const clamped = Math.max(256, Math.min(16384, 2 ** Math.round(Math.log2(size))))
+    if (clamped === this.shortSize) return
+    this.shortSize = clamped
+    this.shortSpectrum = new Float32Array(clamped / 2)
+    this.frame.spectrumShort = this.shortSpectrum
+    if (this.analyserShort) this.analyserShort.fftSize = clamped
   }
 
   setMonitorGain(value: number) {
@@ -229,6 +254,7 @@ export class AudioEngine {
     this.analyserL.getFloatTimeDomainData(this.timeL)
     this.analyserR.getFloatTimeDomainData(this.timeR)
     this.analyserFFT.getFloatFrequencyData(this.spectrum)
+    this.analyserShort?.getFloatFrequencyData(this.shortSpectrum)
 
     // Single pass over the record for the mono mix and every time-domain
     // statistic. Measure once, share widely.
@@ -313,6 +339,7 @@ export class AudioEngine {
     this.timeR.fill(0)
     this.timeMono.fill(0)
     this.spectrum.fill(-100)
+    this.shortSpectrum.fill(-100)
     this.bands.fill(0)
     f.rms = 0
     f.peak = 0

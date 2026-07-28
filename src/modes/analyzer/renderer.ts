@@ -15,7 +15,16 @@ import { clamp } from '../../lib/dsp'
 import { font, phosphor, screenTheme, type ThemeId } from '../../ui/tokens'
 import type { Renderer } from '../types'
 import type { AnalyzerReadout, AnalyzerSettings, ColorMap } from './settings'
-import { buildAxis, hzAt, spectralCentroid, tiltDb, usableTopHz } from './spectrum'
+import {
+  buildAxis,
+  hzAt,
+  magnitudeAt,
+  octaveBands,
+  spectralCentroid,
+  tiltDb,
+  usableTopHz,
+  type Axis,
+} from './spectrum'
 
 /** Octave centres, the frequencies an analyzer actually rules its grid on. */
 const GRID_HZ = [20, 31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -53,11 +62,12 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
   private dpr = 1
 
   /** Per-pixel FFT bin ranges: columns for the spectrum, rows for the waterfall. */
-  private colFrom = new Int32Array(0)
-  private colTo = new Int32Array(0)
-  private rowFrom = new Int32Array(0)
-  private rowTo = new Int32Array(0)
+  private cols: Axis = { from: new Int32Array(0), to: new Int32Array(0), centre: new Float32Array(0) }
+  private rows: Axis = { from: new Int32Array(0), to: new Int32Array(0), centre: new Float32Array(0) }
   private axisKey = ''
+  /** Octave bands for bar mode, recomputed only when the range changes. */
+  private bands: { lo: number; hi: number; centre: number }[] = []
+  private bandKey = ''
   /** Top of the visible range after the Nyquist cap. Held, not re-parsed. */
   private topHz = 20000
 
@@ -153,24 +163,34 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
 
   private ensureAxes(frame: AudioFrame, s: AnalyzerSettings) {
     const top = usableTopHz(s.maxHz, frame.sampleRate)
-    const key = `${this.w}x${this.h}:${s.minHz}:${top}:${frame.sampleRate}`
+    const key = `${this.w}x${this.h}:${s.minHz}:${top}:${frame.sampleRate}:${frame.spectrumShort.length}`
     if (key === this.axisKey) return
     this.axisKey = key
     this.topHz = top
 
-    const bins = frame.spectrum.length
-    const cols = buildAxis(this.w, s.minHz, top, bins, frame.sampleRate)
-    this.colFrom = cols.from
-    this.colTo = cols.to
-    const rows = buildAxis(this.h, s.minHz, top, bins, frame.sampleRate)
-    this.rowFrom = rows.from
-    this.rowTo = rows.to
+    // The analyzer reads the short window: a 171 ms window is visibly behind the
+    // audio, which reads as lag no amount of smoothing can remove.
+    const bins = frame.spectrumShort.length
+    this.cols = buildAxis(this.w, s.minHz, top, bins, frame.sampleRate)
+    this.rows = buildAxis(this.h, s.minHz, top, bins, frame.sampleRate)
+  }
+
+  private ensureBands(s: AnalyzerSettings) {
+    const key = `${s.minHz}:${this.topHz}:${s.bandsPerOctave}`
+    if (key === this.bandKey) return
+    this.bandKey = key
+    this.bands = octaveBands(s.minHz, this.topHz, s.bandsPerOctave)
+  }
+
+  /** Horizontal position of a frequency on the log axis, 0..1. */
+  private tFor(hz: number, s: AnalyzerSettings) {
+    return Math.log(hz / s.minHz) / Math.log(this.topHz / s.minHz)
   }
 
   // ----------------------------------------------------------- measurement --
 
   private measure(frame: AudioFrame, s: AnalyzerSettings) {
-    const spec = frame.spectrum
+    const spec = frame.spectrumShort
 
     // Fast attack, slow release. An analyzer must jump onto a transient and ease
     // off it, or peaks read late and the display lies about dynamics.
@@ -181,10 +201,9 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     let peakX = 0
 
     for (let x = 0; x < this.w; x++) {
-      let best = -140
-      for (let b = this.colFrom[x]; b <= this.colTo[x]; b++) {
-        if (spec[b] > best) best = spec[b]
-      }
+      // Interpolating where a pixel covers less than one bin is what removes the
+      // stepped plateaus at the low end; see magnitudeAt.
+      const best = magnitudeAt(spec, this.cols, x)
       const v = best + tiltDb(hzAt(x, this.w, s.minHz, this.topHz), s.slope)
 
       this.mags[x] = v > this.mags[x] ? v : this.mags[x] + (v - this.mags[x]) * release
@@ -198,7 +217,7 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
 
     this.out.peakHz = hzAt(peakX, this.w, s.minHz, this.topHz)
     this.out.peakDb = peakDb
-    this.out.centroidHz = spectralCentroid(spec, frame.sampleRate)
+    this.out.centroidHz = spectralCentroid(frame.spectrum, frame.sampleRate)
     this.out.rmsDb = frame.rms > 1e-7 ? 20 * Math.log10(frame.rms) : -120
     this.out.spanSec = this.w / Math.max(1, s.scrollRate)
   }
@@ -272,39 +291,68 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     }
   }
 
-  /**
-   * Build the outline once, so the fill, the glow and the bars all describe the
-   * same shape. Drawing bars into the fill while stroking a smooth curve on top
-   * was the previous behaviour, and the two disagreed.
-   */
   private buildOutline(s: AnalyzerSettings) {
     let n = 0
-    if (s.bars) {
-      const step = Math.max(2, Math.round(4 * this.dpr))
-      for (let x = 0; x < this.w; x += step) {
-        let best = -140
-        for (let i = x; i < Math.min(this.w, x + step); i++) {
-          if (this.mags[i] > best) best = this.mags[i]
-        }
-        const y = this.yFor(best, s)
-        this.plotX[n] = x
-        this.plotY[n] = y
-        n++
-        this.plotX[n] = Math.min(this.w, x + step - 1)
-        this.plotY[n] = y
-        n++
-      }
-    } else {
-      for (let x = 0; x < this.w; x++) {
-        this.plotX[n] = x
-        this.plotY[n] = this.yFor(this.mags[x], s)
-        n++
-      }
+    for (let x = 0; x < this.w; x++) {
+      this.plotX[n] = x
+      this.plotY[n] = this.yFor(this.mags[x], s)
+      n++
     }
     this.plotN = n
   }
 
+  /**
+   * Bars as octave-fraction bands, the RTA layout.
+   *
+   * The previous version stepped the curve every few pixels, which is not a bar
+   * chart - it is a curve with corners, and at four CSS pixels a step it was
+   * indistinguishable from the curve. Real bars are bands whose width means
+   * something and is constant in log frequency, drawn from the floor with gaps
+   * between them.
+   */
+  private drawBars(s: AnalyzerSettings) {
+    this.ensureBands(s)
+    const c = this.ctx
+    const [r, g, b] = phosphor.p31.rgb
+    const gap = Math.max(1, Math.round(this.dpr))
+
+    const grad = c.createLinearGradient(0, 0, 0, this.h)
+    grad.addColorStop(0, `rgba(${r},${g},${b},0.92)`)
+    grad.addColorStop(1, `rgba(${r},${g},${b},0.28)`)
+
+    for (const band of this.bands) {
+      const x0 = this.tFor(Math.max(band.lo, s.minHz), s) * this.w
+      const x1 = this.tFor(Math.min(band.hi, this.topHz), s) * this.w
+      const width = Math.max(1, x1 - x0 - gap)
+
+      // The band's level is the loudest column inside it, matching how the curve
+      // treats a pixel covering many bins.
+      let best = -140
+      let peak = -140
+      const from = clamp(Math.round(x0), 0, this.w - 1)
+      const to = clamp(Math.round(x1), 0, this.w - 1)
+      for (let x = from; x <= to; x++) {
+        if (this.mags[x] > best) best = this.mags[x]
+        if (this.peaks[x] > peak) peak = this.peaks[x]
+      }
+
+      const y = this.yFor(best, s)
+      c.fillStyle = grad
+      c.fillRect(x0, y, width, this.h - y)
+
+      if (s.peakHold && peak > s.floorDb) {
+        const py = this.yFor(peak, s)
+        c.fillStyle = `rgba(${r},${g},${b},0.85)`
+        c.fillRect(x0, py - this.dpr, width, Math.max(1, this.dpr))
+      }
+    }
+  }
+
   private drawSpectrum(s: AnalyzerSettings) {
+    if (s.bars) {
+      this.drawBars(s)
+      return
+    }
     this.buildOutline(s)
     if (this.plotN < 2) return
 
@@ -412,17 +460,14 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     const col = this.column
     if (!ctx || !col) return
 
-    const spec = frame.spectrum
+    const spec = frame.spectrumShort
     const data = col.data
     const span = s.ceilDb - s.floorDb
 
     for (let y = 0; y < this.h; y++) {
       // Row 0 is the top of the image, so the highest frequency.
       const row = this.h - 1 - y
-      let best = -140
-      for (let b = this.rowFrom[row]; b <= this.rowTo[row]; b++) {
-        if (spec[b] > best) best = spec[b]
-      }
+      const best = magnitudeAt(spec, this.rows, row)
       const db = best + tiltDb(hzAt(row, this.h, s.minHz, this.topHz), s.slope)
       this.colorAt((db - s.floorDb) / span, s.map, data, y * 4)
     }

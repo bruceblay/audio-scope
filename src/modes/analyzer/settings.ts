@@ -36,6 +36,18 @@ export const MAX_HZ_OPTIONS = [8000, 12000, 16000, 20000, 24000] as const
  */
 export const SCROLL_RATES = [15, 30, 60, 120] as const
 
+/**
+ * Analysis window, in FFT points. A straight trade of latency against
+ * low-frequency detail, so it is a control rather than a constant.
+ *
+ * 8192 points is a 171 ms window - visibly behind the audio. 1024 is 21 ms and
+ * feels immediate, but its bins are 47 Hz wide, which is coarse below 100 Hz.
+ */
+export const FFT_SIZES = [1024, 2048, 4096, 8192] as const
+
+/** Bars are octave-fraction bands. 1/3 octave is the RTA standard. */
+export const BANDS_PER_OCTAVE = [1, 3, 6] as const
+
 export interface AnalyzerSettings {
   view: AnalyzerView
 
@@ -58,6 +70,10 @@ export interface AnalyzerSettings {
 
   /** Draw the spectrum as bars rather than a continuous curve. */
   bars: boolean
+  /** Bands per octave when drawing bars. */
+  bandsPerOctave: number
+  /** Analysis window in FFT points. Trades latency against low-end detail. */
+  fftSize: number
 
   map: ColorMap
   /** Spectrogram columns per second. Sets how much time is on screen. */
@@ -75,6 +91,8 @@ export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   peakHold: true,
   peakDecay: 24,
   bars: false,
+  bandsPerOctave: 3,
+  fftSize: 2048,
   map: 'magma',
   scrollRate: 60,
 }

@@ -43,8 +43,22 @@ export interface AudioFrame {
   timeL: Float32Array
   timeR: Float32Array
   timeMono: Float32Array
-  /** Magnitude spectrum in dBFS, floored at -100. */
+  /**
+   * Magnitude spectrum in dBFS, floored at -100. 8192-point window: fine
+   * frequency resolution (5.9 Hz) at the cost of a 171 ms time window. Pitch
+   * detection needs the resolution.
+   */
   spectrum: Float32Array
+  /**
+   * Second spectrum from a shorter, resizable window.
+   *
+   * FFT size is a straight trade of frequency resolution against time
+   * resolution, and the two consumers want opposite ends of it: pitch needs fine
+   * bins, a live display needs a short window or it visibly lags. One analyser
+   * cannot serve both, so there are two. Length varies with the chosen size, so
+   * derive bin width from it rather than assuming.
+   */
+  spectrumShort: Float32Array
 
   rms: number
   peak: number

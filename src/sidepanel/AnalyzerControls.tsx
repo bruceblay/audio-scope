@@ -1,5 +1,7 @@
 import { formatHz } from '../lib/dsp'
 import {
+  BANDS_PER_OCTAVE,
+  FFT_SIZES,
   MAX_HZ_OPTIONS,
   MIN_HZ_OPTIONS,
   SCROLL_RATES,
@@ -65,6 +67,18 @@ export function AnalyzerPanel({
             value={settings.slope as (typeof SLOPES)[number]}
             format={(v) => (v === 0 ? 'Flat' : `${v} dB/oct`)}
             onChange={(slope) => patch({ slope })}
+          />
+        </Row>
+        {/* Straight trade of latency against low-end detail: 8192 points is a
+            171 ms window and visibly lags the audio, 1024 is 21 ms but its bins
+            are 47 Hz wide. */}
+        <Row label="Window">
+          <Stepper
+            label="Analysis window"
+            options={FFT_SIZES}
+            value={settings.fftSize as (typeof FFT_SIZES)[number]}
+            format={(v) => `${((v / 48000) * 1000).toFixed(0)} ms`}
+            onChange={(fftSize) => patch({ fftSize })}
           />
         </Row>
         {/* Averaging smooths the spectrum's release. A waterfall column is a
@@ -164,6 +178,17 @@ export function AnalyzerPanel({
                 ]}
               />
             </Row>
+            {settings.bars && (
+              <Row label="Bands">
+                <Stepper
+                  label="Bands per octave"
+                  options={BANDS_PER_OCTAVE}
+                  value={settings.bandsPerOctave as (typeof BANDS_PER_OCTAVE)[number]}
+                  format={(v) => (v === 1 ? 'Octave' : `1/${v} oct`)}
+                  onChange={(bandsPerOctave) => patch({ bandsPerOctave })}
+                />
+              </Row>
+            )}
             <Row label="Peak hold">
               <Segmented<'on' | 'off'>
                 label="Peak hold"

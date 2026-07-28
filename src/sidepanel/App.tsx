@@ -315,6 +315,12 @@ export function App() {
     }
   }, [engine])
 
+  // The analyzer's window size is an engine concern: it resizes a dedicated
+  // AnalyserNode rather than the one pitch detection depends on.
+  useEffect(() => {
+    engine.setShortFftSize(analyzer.fftSize)
+  }, [engine, analyzer.fftSize])
+
   // Release the AudioContext for good when the panel unmounts.
   useEffect(() => () => void engine.dispose(), [engine])
 

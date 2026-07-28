@@ -10,6 +10,8 @@ export interface Axis {
   from: Int32Array<ArrayBuffer>
   /** Last FFT bin falling in each pixel. */
   to: Int32Array<ArrayBuffer>
+  /** Fractional bin at each pixel's centre frequency, for interpolation. */
+  centre: Float32Array<ArrayBuffer>
 }
 
 /**
@@ -32,6 +34,7 @@ export function buildAxis(
   const ratio = Math.log(maxHz / minHz)
   const from = new Int32Array(n)
   const to = new Int32Array(n)
+  const centre = new Float32Array(n)
   for (let i = 0; i < n; i++) {
     const f0 = minHz * Math.exp((i / n) * ratio)
     const f1 = minHz * Math.exp(((i + 1) / n) * ratio)
@@ -39,8 +42,77 @@ export function buildAxis(
     const b1 = clamp(Math.ceil(f1 / hzPerBin), 0, bins - 1)
     from[i] = b0
     to[i] = Math.max(b0, b1)
+    centre[i] = clamp((Math.sqrt(f0 * f1) / hzPerBin), 0, bins - 1)
   }
-  return { from, to }
+  return { from, to, centre }
+}
+
+/**
+ * Magnitude at a pixel, in dB.
+ *
+ * Two regimes, because the log axis stretches the bottom of the spectrum and
+ * squeezes the top:
+ *
+ * - **Many bins per pixel** (the top end): take the maximum, so a narrow peak
+ *   cannot be averaged away.
+ * - **Many pixels per bin** (the bottom end): interpolate. Taking the single
+ *   covering bin draws it as a flat plateau, and at 20 Hz with an 8192-point FFT
+ *   one bin is 22 pixels wide - which is exactly the boxy, stepped look at the
+ *   low end. Interpolating between neighbouring bins gives a continuous curve
+ *   without inventing resolution the FFT does not have.
+ */
+export function magnitudeAt(
+  spectrum: Float32Array,
+  axis: Axis,
+  i: number,
+  floorDb = -140,
+): number {
+  const from = axis.from[i]
+  const to = axis.to[i]
+  // `to` is a ceil and `from` a floor, so a pixel narrower than a single bin
+  // still reports two of them. Testing `to > from` therefore never took the
+  // interpolation path at all - the low end stayed as stepped as before. Two
+  // bins or fewer means the pixel is at or below bin resolution: interpolate.
+  if (to - from > 1) {
+    let best = floorDb
+    for (let b = from; b <= to; b++) if (spectrum[b] > best) best = spectrum[b]
+    return best
+  }
+  const c = axis.centre[i]
+  const lo = Math.floor(c)
+  const hi = Math.min(spectrum.length - 1, lo + 1)
+  const f = c - lo
+  return spectrum[lo] + (spectrum[hi] - spectrum[lo]) * f
+}
+
+/**
+ * Fractional-octave band edges, the standard RTA layout (IEC 61260).
+ *
+ * Bars drawn on arbitrary pixel steps are not an analyzer, they are a curve with
+ * corners - which is why a few-pixel step width made bars and curve look
+ * identical. Real bars are octave-fraction bands, so their width carries meaning
+ * and is constant in log frequency.
+ */
+export function octaveBands(
+  minHz: number,
+  maxHz: number,
+  perOctave: number,
+): { lo: number; hi: number; centre: number }[] {
+  const bands: { lo: number; hi: number; centre: number }[] = []
+  const step = Math.pow(2, 1 / perOctave)
+  const half = Math.pow(2, 1 / (2 * perOctave))
+  // Anchored on 1 kHz, as the standard series is.
+  let k = Math.ceil(Math.log2(minHz / 1000) * perOctave)
+  for (;;) {
+    const centre = 1000 * Math.pow(2, k / perOctave)
+    if (centre > maxHz) break
+    const lo = centre / half
+    const hi = centre * half
+    if (hi > minHz) bands.push({ lo, hi, centre })
+    k++
+    void step
+  }
+  return bands
 }
 
 /** Frequency at the centre of pixel `i` of `n`, on the same log axis. */

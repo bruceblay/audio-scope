@@ -14,7 +14,19 @@ import {
   SLOPES,
   DEFAULT_ANALYZER_SETTINGS,
 } from '../src/modes/analyzer/settings'
-import { buildAxis, hzAt, spectralCentroid, tiltDb, usableTopHz } from '../src/modes/analyzer/spectrum'
+import {
+  BANDS_PER_OCTAVE,
+  FFT_SIZES,
+} from '../src/modes/analyzer/settings'
+import {
+  buildAxis,
+  hzAt,
+  magnitudeAt,
+  octaveBands,
+  spectralCentroid,
+  tiltDb,
+  usableTopHz,
+} from '../src/modes/analyzer/spectrum'
 
 let failures = 0
 const check = (name: string, ok: boolean, detail: string) => {
@@ -162,6 +174,103 @@ console.log('\n--- CENTROID: silence does not produce a number ---')
   check('flat input returns a finite value', Number.isFinite(got) && got >= 0, `${got.toFixed(0)} Hz`)
 }
 
+// --- Low-end resolution ----------------------------------------------------
+console.log('\n--- LOW END: no stepped plateaus ---')
+{
+  // On a log axis one FFT bin spans many pixels at the bottom of the range. At
+  // 20 Hz with an 8192-point window that is 22 pixels, and taking the single
+  // covering bin draws every one of them at the same height - the boxy, stepped
+  // look. Interpolation has to produce a monotonic ramp instead.
+  const bins = 4096
+  const top = usableTopHz(20000, SR)
+  const axis = buildAxis(600, 20, top, bins, SR)
+
+  // A spectrum rising smoothly with frequency: any plateau in the output is the
+  // renderer's, not the signal's.
+  const spec = new Float32Array(bins)
+  for (let b = 0; b < bins; b++) spec[b] = -100 + (b / bins) * 80
+
+  let longestRun = 1
+  let run = 1
+  for (let x = 1; x < 200; x++) {
+    const a = magnitudeAt(spec, axis, x - 1)
+    const b = magnitudeAt(spec, axis, x)
+    if (Math.abs(b - a) < 1e-6) run++
+    else run = 1
+    longestRun = Math.max(longestRun, run)
+  }
+  check(
+    'lowest 200 columns have no flat plateau',
+    longestRun <= 2,
+    `longest identical run is ${longestRun} px (single-bin sampling gave 22)`,
+  )
+
+  // And it must still take the max where many bins share a pixel, or narrow
+  // peaks vanish at the top end.
+  const spiky = new Float32Array(bins).fill(-100)
+  const topCol = 590
+  const mid = Math.round((axis.from[topCol] + axis.to[topCol]) / 2)
+  spiky[mid] = -10
+  check(
+    'a narrow peak survives at the top end',
+    magnitudeAt(spiky, axis, topCol) === -10,
+    `column ${topCol} spans ${axis.to[topCol] - axis.from[topCol] + 1} bins and kept the peak`,
+  )
+}
+
+// --- Octave bands ----------------------------------------------------------
+console.log('\n--- BARS: real octave-fraction bands ---')
+{
+  for (const per of BANDS_PER_OCTAVE) {
+    const bands = octaveBands(20, 20000, per)
+    const expected = Math.log2(20000 / 20) * per
+    check(
+      `1/${per} octave spans the range`,
+      Math.abs(bands.length - expected) <= 2,
+      `${bands.length} bands, about ${expected.toFixed(0)} expected`,
+    )
+  }
+
+  const third = octaveBands(20, 20000, 3)
+  // Standard series is anchored on 1 kHz.
+  check(
+    'anchored on 1 kHz',
+    third.some((b) => Math.abs(b.centre - 1000) < 0.5),
+    `centres include ${third.find((b) => Math.abs(b.centre - 1000) < 0.5)?.centre.toFixed(0)} Hz`,
+  )
+  // Bands must tile without gaps, or the display has holes in it.
+  let worstGap = 0
+  for (let i = 1; i < third.length; i++) {
+    worstGap = Math.max(worstGap, Math.abs(third[i].lo - third[i - 1].hi) / third[i].lo)
+  }
+  check('bands tile without gaps', worstGap < 1e-9, `worst edge mismatch ${worstGap.toExponential(1)}`)
+
+  // Constant width in log frequency is what makes a bar's width mean something.
+  const widths = third.map((b) => Math.log2(b.hi / b.lo))
+  const spread = Math.max(...widths) - Math.min(...widths)
+  check('every band is the same log width', spread < 1e-9, `spread ${spread.toExponential(1)} octaves`)
+}
+
+// --- Window size -----------------------------------------------------------
+console.log('\n--- WINDOW: the latency/resolution trade is real ---')
+{
+  for (const size of FFT_SIZES) {
+    const ms = (size / SR) * 1000
+    const binHz = SR / size
+    console.log(`         ${String(size).padStart(5)} pts -> ${ms.toFixed(0).padStart(3)} ms window, ${binHz.toFixed(1).padStart(5)} Hz bins`)
+  }
+  check(
+    'all sizes are powers of two',
+    FFT_SIZES.every((n) => Number.isInteger(Math.log2(n))),
+    `${FFT_SIZES.join(', ')}`,
+  )
+  check(
+    'the default is well under the old 171 ms',
+    (2048 / SR) * 1000 < 60,
+    `${((2048 / SR) * 1000).toFixed(0)} ms against 171 ms before`,
+  )
+}
+
 // --- Settings ---------------------------------------------------------------
 console.log('\n--- SETTINGS: every default is a selectable option ---')
 {
@@ -169,6 +278,12 @@ console.log('\n--- SETTINGS: every default is a selectable option ---')
   check('default tilt is on the stepper', (SLOPES as readonly number[]).includes(d.slope), `${d.slope} dB/oct`)
   check('default low Hz is on the stepper', (MIN_HZ_OPTIONS as readonly number[]).includes(d.minHz), `${d.minHz} Hz`)
   check('default high Hz is on the stepper', (MAX_HZ_OPTIONS as readonly number[]).includes(d.maxHz), `${d.maxHz} Hz`)
+  check('default window is on the stepper', (FFT_SIZES as readonly number[]).includes(d.fftSize), `${d.fftSize} pts`)
+  check(
+    'default bands is on the stepper',
+    (BANDS_PER_OCTAVE as readonly number[]).includes(d.bandsPerOctave),
+    `1/${d.bandsPerOctave} oct`,
+  )
   check(
     'default scroll rate is on the stepper',
     (SCROLL_RATES as readonly number[]).includes(d.scrollRate),
