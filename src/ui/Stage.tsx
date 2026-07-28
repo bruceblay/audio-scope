@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { AudioEngine } from '../audio/engine'
+import { AnalyzerRenderer } from '../modes/analyzer/renderer'
+import type { AnalyzerReadout, AnalyzerSettings } from '../modes/analyzer/settings'
 import { CymaticsRenderer } from '../modes/cymatics/renderer'
 import type { CymaticsReadout, CymaticsSettings } from '../modes/cymatics/settings'
 import { ScopeRenderer } from '../modes/scope/renderer'
@@ -7,10 +9,10 @@ import type { ScopeReadout, ScopeSettings } from '../modes/scope/settings'
 import type { Renderer } from '../modes/types'
 import type { ThemeId } from './tokens'
 
-export type ModeId = 'scope' | 'cymatics'
+export type ModeId = 'scope' | 'analyzer' | 'cymatics'
 
-type AnySettings = ScopeSettings | CymaticsSettings
-type AnyReadout = ScopeReadout | CymaticsReadout
+type AnySettings = ScopeSettings | CymaticsSettings | AnalyzerSettings
+type AnyReadout = ScopeReadout | CymaticsReadout | AnalyzerReadout
 
 /**
  * The canvas surface and the single render loop. One rAF drives everything:
@@ -53,7 +55,11 @@ export function Stage({
     // App passes the settings object matching `mode`, and both change in the
     // same render, so the renderer never sees the other mode's shape.
     const renderer: Renderer<AnySettings, AnyReadout> = (
-      mode === 'cymatics' ? new CymaticsRenderer(canvas) : new ScopeRenderer(canvas)
+      mode === 'cymatics'
+        ? new CymaticsRenderer(canvas)
+        : mode === 'analyzer'
+          ? new AnalyzerRenderer(canvas)
+          : new ScopeRenderer(canvas)
     ) as Renderer<AnySettings, AnyReadout>
 
     const applySize = () => {

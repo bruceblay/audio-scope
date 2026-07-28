@@ -9,6 +9,11 @@ import {
 } from '../audio/capture'
 import { AudioEngine } from '../audio/engine'
 import {
+  DEFAULT_ANALYZER_SETTINGS,
+  type AnalyzerReadout,
+  type AnalyzerSettings,
+} from '../modes/analyzer/settings'
+import {
   DEFAULT_CYMATICS_SETTINGS,
   type CymaticsReadout,
   type CymaticsSettings,
@@ -21,6 +26,7 @@ import {
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
+import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
 import { ScopePanel, ScopeReadouts } from './ScopeControls'
 
@@ -66,8 +72,16 @@ const EMPTY_CYMATICS: CymaticsReadout = {
  */
 const SHOW_CYMATICS = false
 
+const EMPTY_ANALYZER: AnalyzerReadout = {
+  peakHz: 0,
+  peakDb: -120,
+  centroidHz: 0,
+  rmsDb: -120,
+}
+
 const ALL_MODES: { id: ModeId; label: string }[] = [
   { id: 'scope', label: 'Oscilloscope' },
+  { id: 'analyzer', label: 'Analyzer' },
   { id: 'cymatics', label: 'Cymatics' },
 ]
 
@@ -90,8 +104,10 @@ export function App() {
   const [theme, setTheme] = useState<ThemeId>('dark')
   const [scope, setScope] = useState<ScopeSettings>(DEFAULT_SCOPE_SETTINGS)
   const [cymatics, setCymatics] = useState<CymaticsSettings>(DEFAULT_CYMATICS_SETTINGS)
+  const [analyzer, setAnalyzer] = useState<AnalyzerSettings>(DEFAULT_ANALYZER_SETTINGS)
   const [scopeReadout, setScopeReadout] = useState<ScopeReadout>(EMPTY_SCOPE)
   const [cymaticsReadout, setCymaticsReadout] = useState<CymaticsReadout>(EMPTY_CYMATICS)
+  const [analyzerReadout, setAnalyzerReadout] = useState<AnalyzerReadout>(EMPTY_ANALYZER)
 
   /**
    * Single teardown path. Every listener below routes here, and it is safe to
@@ -255,6 +271,7 @@ export function App() {
             theme: ThemeId
             scope: ScopeSettings
             cymatics: CymaticsSettings
+            analyzer: AnalyzerSettings
           }>
         | undefined
       if (!saved) return
@@ -265,15 +282,16 @@ export function App() {
       if (saved.theme) setTheme(saved.theme)
       if (saved.scope) setScope((prev) => ({ ...prev, ...saved.scope }))
       if (saved.cymatics) setCymatics((prev) => ({ ...prev, ...saved.cymatics }))
+      if (saved.analyzer) setAnalyzer((prev) => ({ ...prev, ...saved.analyzer }))
     })
   }, [])
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      chrome.storage.sync.set({ [STORE_KEY]: { mode, theme, scope, cymatics } }).catch(() => {})
+      chrome.storage.sync.set({ [STORE_KEY]: { mode, theme, scope, cymatics, analyzer } }).catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, theme, scope, cymatics])
+  }, [mode, theme, scope, cymatics, analyzer])
 
   const patchScope = useCallback(
     (next: Partial<ScopeSettings>) => setScope((prev) => ({ ...prev, ...next })),
@@ -281,6 +299,10 @@ export function App() {
   )
   const patchCymatics = useCallback(
     (next: Partial<CymaticsSettings>) => setCymatics((prev) => ({ ...prev, ...next })),
+    [],
+  )
+  const patchAnalyzer = useCallback(
+    (next: Partial<AnalyzerSettings>) => setAnalyzer((prev) => ({ ...prev, ...next })),
     [],
   )
 
@@ -291,6 +313,7 @@ export function App() {
   }, [theme])
 
   const isCymatics = mode === 'cymatics'
+  const isAnalyzer = mode === 'analyzer'
   const dim = !connected
   const needsInvocation = !!error && error.recoverable
 
@@ -325,12 +348,14 @@ export function App() {
       <Stage
         engine={engine}
         mode={mode}
-        settings={isCymatics ? cymatics : scope}
+        settings={isCymatics ? cymatics : isAnalyzer ? analyzer : scope}
         theme={theme}
         onReadout={
           isCymatics
             ? (r) => setCymaticsReadout(r as CymaticsReadout)
-            : (r) => setScopeReadout(r as ScopeReadout)
+            : isAnalyzer
+              ? (r) => setAnalyzerReadout(r as AnalyzerReadout)
+              : (r) => setScopeReadout(r as ScopeReadout)
         }
       >
         {!connected && (
@@ -369,6 +394,8 @@ export function App() {
       <div className="readouts">
         {isCymatics ? (
           <CymaticsReadouts readout={cymaticsReadout} dim={dim} />
+        ) : isAnalyzer ? (
+          <AnalyzerReadouts readout={analyzerReadout} dim={dim} />
         ) : (
           <ScopeReadouts readout={scopeReadout} settings={scope} dim={dim} />
         )}
@@ -378,6 +405,8 @@ export function App() {
       <div className="controls" hidden={!showControls}>
         {isCymatics ? (
           <CymaticsPanel settings={cymatics} patch={patchCymatics} />
+        ) : isAnalyzer ? (
+          <AnalyzerPanel settings={analyzer} patch={patchAnalyzer} />
         ) : (
           <ScopePanel settings={scope} patch={patchScope} />
         )}
