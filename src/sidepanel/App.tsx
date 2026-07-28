@@ -23,7 +23,6 @@ import {
   type ScopeReadout,
   type ScopeSettings,
 } from '../modes/scope/settings'
-import { Meters } from '../ui/Meters'
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
@@ -34,14 +33,22 @@ import { ScopePanel, ScopeReadouts } from './ScopeControls'
 // Bumping this discards stored preferences. Done deliberately when a default
 // changes, since merge-on-load means a saved value always wins and a new default
 // would otherwise never be seen.
-const STORE_KEY = 'settings.v2'
+/**
+ * One final bump.
+ *
+ * Records written before `defaults` existed carry no way to tell "the user chose
+ * this" from "that was the default at the time", so every stale default in them
+ * survives as a decision - which is why the meter strip kept reappearing and why
+ * the magma waterfall default never landed. From here the snapshot below does
+ * that job and no further bump should be needed.
+ */
+const STORE_KEY = 'settings.v3'
 
 /**
  * The defaults in force right now. Persisted alongside the user's settings so a
  * later default change can actually reach them.
  */
 const DEFAULTS = {
-  showMeters: false,
   scope: DEFAULT_SCOPE_SETTINGS,
   cymatics: DEFAULT_CYMATICS_SETTINGS,
   analyzer: DEFAULT_ANALYZER_SETTINGS,
@@ -138,7 +145,6 @@ export function App() {
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
   const [showControls, setShowControls] = useState(true)
-  const [showMeters, setShowMeters] = useState(DEFAULTS.showMeters)
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -332,7 +338,6 @@ export function App() {
         | Partial<{
             mode: ModeId
             theme: ThemeId
-            showMeters: boolean
             scope: ScopeSettings
             cymatics: CymaticsSettings
             analyzer: AnalyzerSettings
@@ -344,9 +349,6 @@ export function App() {
       // A profile that last used cymatics must not restore into a hidden mode.
       if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
       if (saved.theme) setTheme(saved.theme)
-      if (typeof saved.showMeters === 'boolean' && saved.showMeters !== was?.showMeters) {
-        setShowMeters(saved.showMeters)
-      }
       setScope((prev) => adopt(prev, saved.scope, was?.scope))
       setCymatics((prev) => adopt(prev, saved.cymatics, was?.cymatics))
       setAnalyzer((prev) => adopt(prev, saved.analyzer, was?.analyzer))
@@ -356,10 +358,13 @@ export function App() {
   useEffect(() => {
     const id = window.setTimeout(() => {
       chrome.storage.sync
-        .set({ [STORE_KEY]: { mode, theme, showMeters, scope, cymatics, analyzer } }).catch(() => {})
+        .set({
+          [STORE_KEY]: { mode, theme, scope, cymatics, analyzer, defaults: DEFAULTS },
+        })
+        .catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, theme, showMeters, scope, cymatics, analyzer])
+  }, [mode, theme, scope, cymatics, analyzer])
 
   const patchScope = useCallback(
     (next: Partial<ScopeSettings>) => setScope((prev) => ({ ...prev, ...next })),
@@ -459,8 +464,6 @@ export function App() {
         )}
       </Stage>
 
-      {showMeters && <Meters engine={engine} theme={theme} />}
-
       <div className="readouts">
         {isCymatics ? (
           <CymaticsReadouts readout={cymaticsReadout} dim={dim} />
@@ -485,17 +488,6 @@ export function App() {
           <ScopePanel settings={scope} patch={patchScope} />
         )}
         <Group title="Instrument">
-          <Row label="Meters">
-            <Segmented<'on' | 'off'>
-              label="Level meters"
-              value={showMeters ? 'on' : 'off'}
-              onChange={(v) => setShowMeters(v === 'on')}
-              options={[
-                { value: 'on', label: 'On' },
-                { value: 'off', label: 'Off' },
-              ]}
-            />
-          </Row>
           <Row label="Panel">
             <Segmented<ThemeId>
               label="Panel finish"

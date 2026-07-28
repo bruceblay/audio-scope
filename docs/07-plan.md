@@ -196,6 +196,22 @@ picking it back up:
 Recorded so they are not lost. Neither is specified yet - the ambiguities below
 should be settled with Bruce before building, not guessed at.
 
+### Level meters, built and shelved
+
+`src/audio/meters.ts` and `src/ui/Meters.tsx` implement a persistent meter strip
+with genuinely standard ballistics - VU per ANSI C16.5 modelled as the damped
+second-order mechanical system it is (verified 100.9% of final at 300 ms, 0.89%
+overshoot, symmetric fall), PPM per DIN 45406 (verified 20.00 dB in 1.7 s), peak
+hold, clip lights and a correlation strip.
+
+Shelved on look, not on correctness. The strip is not rendered anywhere; the
+ballistics still run in the engine and `test/meters.test.ts` still guards them,
+so re-enabling is one line in `App.tsx`.
+
+If it comes back, the parts probably worth keeping are the clip lights and the
+correlation strip - neither needs to be drawn as a bar meter, and both answer a
+question the scope cannot.
+
 ### Analyzer mode (the cymatics slot)
 
 Cymatics is hidden, freeing the second mode slot. Candidates below, grouped by

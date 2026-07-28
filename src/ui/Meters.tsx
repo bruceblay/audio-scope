@@ -4,7 +4,12 @@ import { clamp } from '../lib/dsp'
 import { screenTheme, type ThemeId } from './tokens'
 
 /**
- * Level meters, always visible rather than a mode.
+ * NOT CURRENTLY RENDERED. Bruce did not like how the strip looked, and a feature
+ * behind a toggle that keeps reappearing is worse than no feature. Kept because
+ * the ballistics behind it are real and verified (test/meters.test.ts); bringing
+ * it back is one line in App.tsx.
+ *
+ * Level meters, intended as a persistent strip rather than a mode.
  *
  * Level and phase are things you want in view *while* watching something else -
  * a scope trace tells you nothing about whether you are clipping. Making them a
