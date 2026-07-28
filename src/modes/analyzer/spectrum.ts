@@ -170,3 +170,77 @@ export function spectralCentroid(
 export function usableTopHz(requestedHz: number, sampleRate: number): number {
   return Math.min(requestedHz, sampleRate * 0.5 * 0.98)
 }
+
+/**
+ * Fractional-octave smoothing across the display, the standard analyzer form.
+ *
+ * Smoothing by a fixed number of hertz would be wrong: 50 Hz is most of the
+ * bottom octave and nothing at all at 10 kHz. Octave-fraction smoothing is
+ * constant-Q - it averages over a proportional bandwidth, so it smooths lightly
+ * where the ear resolves finely and heavily where it does not. It is also what
+ * every acoustic measurement package means by "smoothing", so the setting is
+ * comparable to other tools.
+ *
+ * Because the display axis is already log frequency, a 1/N octave window is a
+ * constant *pixel* width, and the whole thing reduces to a convolution.
+ *
+ * A true Gaussian kernel rather than cascaded box passes. Cascades are the cheap
+ * way to approximate one, but each pass has an integer width, and at the narrow
+ * settings that quantization dominates: 1/48 and 1/24 octave collapsed to the
+ * same kernel, and 1/12 came out 31% too wide. A float sigma has no such floor,
+ * and at these radii the direct convolution is a few tens of thousands of
+ * multiply-adds per frame.
+ *
+ * @param fraction  N in "1/N octave". 0 disables.
+ */
+export function smoothOctaves(
+  mags: Float32Array,
+  tmp: Float32Array,
+  n: number,
+  fraction: number,
+  minHz: number,
+  maxHz: number,
+) {
+  if (fraction <= 0 || n < 3) return
+
+  const pixelsPerOctave = n / Math.log2(maxHz / minHz)
+  // Equivalent rectangular width of a Gaussian is sigma·sqrt(2·pi), so this
+  // makes "1/N octave" mean a window that genuinely averages over 1/N octave.
+  const width = pixelsPerOctave / fraction
+  const sigma = width / Math.sqrt(2 * Math.PI)
+  if (sigma < 0.35) return // narrower than a pixel; nothing to do
+
+  const kernel = gaussianKernel(sigma)
+  const radius = (kernel.length - 1) / 2
+  const last = n - 1
+
+  for (let i = 0; i < n; i++) {
+    let sum = 0
+    for (let k = -radius; k <= radius; k++) {
+      const j = i + k
+      sum += mags[j < 0 ? 0 : j > last ? last : j] * kernel[k + radius]
+    }
+    tmp[i] = sum
+  }
+  mags.set(tmp.subarray(0, n))
+}
+
+let cachedSigma = -1
+let cachedKernel = new Float32Array(0)
+
+/** Normalized Gaussian, truncated at 3 sigma. Cached, since sigma rarely moves. */
+function gaussianKernel(sigma: number): Float32Array {
+  if (sigma === cachedSigma) return cachedKernel
+  const radius = Math.max(1, Math.ceil(sigma * 3))
+  const k = new Float32Array(radius * 2 + 1)
+  let total = 0
+  for (let i = -radius; i <= radius; i++) {
+    const v = Math.exp(-(i * i) / (2 * sigma * sigma))
+    k[i + radius] = v
+    total += v
+  }
+  for (let i = 0; i < k.length; i++) k[i] /= total
+  cachedSigma = sigma
+  cachedKernel = k
+  return k
+}

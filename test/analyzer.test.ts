@@ -17,12 +17,14 @@ import {
 import {
   BANDS_PER_OCTAVE,
   FFT_SIZES,
+  SMOOTH_OCTAVES,
 } from '../src/modes/analyzer/settings'
 import {
   buildAxis,
   hzAt,
   magnitudeAt,
   octaveBands,
+  smoothOctaves,
   spectralCentroid,
   tiltDb,
   usableTopHz,
@@ -286,6 +288,102 @@ console.log('\n--- WINDOW: the latency/resolution trade is real ---')
   )
 }
 
+// --- Smoothing -------------------------------------------------------------
+console.log('\n--- SMOOTHING: constant-Q, and it actually smooths ---')
+{
+  const N = 600
+  const MIN = 20
+  const TOP = usableTopHz(20000, SR)
+
+  /** Total absolute change along the curve: how jagged it is. */
+  const roughness = (a: Float32Array) => {
+    let sum = 0
+    for (let i = 1; i < a.length; i++) sum += Math.abs(a[i] - a[i - 1])
+    return sum
+  }
+
+  // A noisy curve, deterministic so a failure reproduces.
+  let seed = 7
+  const noisy = () => {
+    const a = new Float32Array(N)
+    for (let i = 0; i < N; i++) {
+      seed = (seed * 1664525 + 1013904223) >>> 0
+      a[i] = -50 + (seed / 4294967296 - 0.5) * 24
+    }
+    return a
+  }
+
+  const raw = roughness(noisy())
+  let previous = raw
+  let monotonic = true
+  const readings: string[] = []
+  for (const fraction of [48, 24, 12, 6, 3]) {
+    const a = noisy()
+    smoothOctaves(a, new Float32Array(N), N, fraction, MIN, TOP)
+    const r = roughness(a)
+    readings.push(`1/${fraction}:${(r / raw).toFixed(3)}`)
+    if (r > previous) monotonic = false
+    previous = r
+  }
+  check('wider fractions smooth harder', monotonic, `roughness vs raw  ${readings.join('  ')}`)
+
+  {
+    const a = noisy()
+    smoothOctaves(a, new Float32Array(N), N, 6, MIN, TOP)
+    check(
+      '1/6 octave visibly smooths',
+      roughness(a) < raw * 0.25,
+      `roughness cut to ${((roughness(a) / raw) * 100).toFixed(0)}% of raw`,
+    )
+  }
+
+  {
+    const a = noisy()
+    const before = Array.from(a)
+    smoothOctaves(a, new Float32Array(N), N, 0, MIN, TOP)
+    check('off is a true bypass', before.every((v, i) => v === a[i]), 'curve untouched at fraction 0')
+  }
+
+  // Constant-Q: the window is a fixed width in log frequency, which on a log
+  // axis means a fixed pixel width rather than a fixed number of hertz.
+  //
+  // Measured as equivalent rectangular width, sum/peak of the impulse response.
+  // Support is the wrong metric here: a cascade of boxes approximates a Gaussian,
+  // and a Gaussian's tails run far past the width it actually works over, so
+  // "where does it stop being zero" reports roughly twice the effective window.
+  const equivalentOctaves = (fraction: number) => {
+    const a = new Float32Array(N).fill(0)
+    a[300] = 1
+    smoothOctaves(a, new Float32Array(N), N, fraction, MIN, TOP)
+    let sum = 0
+    let peak = 0
+    for (const v of a) {
+      sum += v
+      if (v > peak) peak = v
+    }
+    return (sum / peak / N) * Math.log2(TOP / MIN)
+  }
+
+  for (const fraction of [12, 6, 3]) {
+    const got = equivalentOctaves(fraction)
+    const want = 1 / fraction
+    check(
+      `1/${fraction} octave smooths over about 1/${fraction} octave`,
+      Math.abs(got - want) / want < 0.3,
+      `${got.toFixed(4)} octaves against a ${want.toFixed(4)} target`,
+    )
+  }
+
+  // And it must not move the level: smoothing redistributes, it does not add.
+  {
+    const a = new Float32Array(N).fill(-33)
+    smoothOctaves(a, new Float32Array(N), N, 6, MIN, TOP)
+    let worst = 0
+    for (const v of a) worst = Math.max(worst, Math.abs(v + 33))
+    check('a flat curve stays flat', worst < 1e-6, `worst deviation ${worst.toExponential(1)} dB`)
+  }
+}
+
 // --- Settings ---------------------------------------------------------------
 console.log('\n--- SETTINGS: every default is a selectable option ---')
 {
@@ -294,6 +392,11 @@ console.log('\n--- SETTINGS: every default is a selectable option ---')
   check('default low Hz is on the stepper', (MIN_HZ_OPTIONS as readonly number[]).includes(d.minHz), `${d.minHz} Hz`)
   check('default high Hz is on the stepper', (MAX_HZ_OPTIONS as readonly number[]).includes(d.maxHz), `${d.maxHz} Hz`)
   check('default window is on the stepper', (FFT_SIZES as readonly number[]).includes(d.fftSize), `${d.fftSize} pts`)
+  check(
+    'default smoothing is on the stepper',
+    (SMOOTH_OCTAVES as readonly number[]).includes(d.smoothOctave),
+    `1/${d.smoothOctave} oct`,
+  )
   check(
     'default bands is on the stepper',
     (BANDS_PER_OCTAVE as readonly number[]).includes(d.bandsPerOctave),

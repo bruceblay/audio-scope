@@ -5,6 +5,7 @@ import {
   MAX_HZ_OPTIONS,
   MIN_HZ_OPTIONS,
   SCROLL_RATES,
+  SMOOTH_OCTAVES,
   SLOPES,
   type AnalyzerReadout,
   type AnalyzerSettings,
@@ -186,6 +187,20 @@ export function AnalyzerPanel({
                   value={settings.bandsPerOctave as (typeof BANDS_PER_OCTAVE)[number]}
                   format={(v) => (v === 1 ? 'Octave' : `1/${v} oct`)}
                   onChange={(bandsPerOctave) => patch({ bandsPerOctave })}
+                />
+              </Row>
+            )}
+            {/* Constant-Q: smooths proportionally to frequency, so it stays
+                light where the ear resolves finely. Bars skip it because banding
+                already does the same job. */}
+            {!settings.bars && (
+              <Row label="Smoothing">
+                <Stepper
+                  label="Curve smoothing"
+                  options={SMOOTH_OCTAVES}
+                  value={settings.smoothOctave as (typeof SMOOTH_OCTAVES)[number]}
+                  format={(v) => (v === 0 ? 'Off' : `1/${v} oct`)}
+                  onChange={(smoothOctave) => patch({ smoothOctave })}
                 />
               </Row>
             )}

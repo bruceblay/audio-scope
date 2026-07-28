@@ -20,6 +20,7 @@ import {
   hzAt,
   magnitudeAt,
   octaveBands,
+  smoothOctaves,
   spectralCentroid,
   tiltDb,
   usableTopHz,
@@ -74,6 +75,8 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
   /** Smoothed and held magnitudes, in dB, one per column. */
   private mags = new Float32Array(0)
   private peaks = new Float32Array(0)
+  /** Scratch for the smoothing passes. */
+  private smoothTmp = new Float32Array(0)
 
   /** Outline polyline, rebuilt each frame. Bars and curve share it. */
   private plotX = new Float32Array(0)
@@ -112,6 +115,7 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
 
     this.mags = new Float32Array(width).fill(-140)
     this.peaks = new Float32Array(width).fill(-140)
+    this.smoothTmp = new Float32Array(width)
     // Bars emit two points per step, so the outline can exceed one point per pixel.
     this.plotX = new Float32Array(width * 2 + 4)
     this.plotY = new Float32Array(width * 2 + 4)
@@ -197,18 +201,26 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     const release = 1 - clamp(s.averaging, 0, 0.98) * 0.85
     const decayPerFrame = s.peakDecay * frame.dt
 
-    let peakDb = -140
-    let peakX = 0
-
     for (let x = 0; x < this.w; x++) {
       // Interpolating where a pixel covers less than one bin is what removes the
       // stepped plateaus at the low end; see magnitudeAt.
       const best = magnitudeAt(spec, this.cols, x)
       const v = best + tiltDb(hzAt(x, this.w, s.minHz, this.topHz), s.slope)
-
       this.mags[x] = v > this.mags[x] ? v : this.mags[x] + (v - this.mags[x]) * release
-      this.peaks[x] = Math.max(this.mags[x], this.peaks[x] - decayPerFrame)
+    }
 
+    // Smooth across frequency before anything reads the curve, so the peak
+    // marker and the hold line sit on the shape actually being drawn rather than
+    // on a rougher one underneath it. Bars skip it: banding is the same
+    // operation, and doing both would smooth twice.
+    if (!s.bars) {
+      smoothOctaves(this.mags, this.smoothTmp, this.w, s.smoothOctave, s.minHz, this.topHz)
+    }
+
+    let peakDb = -140
+    let peakX = 0
+    for (let x = 0; x < this.w; x++) {
+      this.peaks[x] = Math.max(this.mags[x], this.peaks[x] - decayPerFrame)
       if (this.mags[x] > peakDb) {
         peakDb = this.mags[x]
         peakX = x

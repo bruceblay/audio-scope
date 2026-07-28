@@ -48,6 +48,14 @@ export const SCROLL_RATES = [15, 30, 60, 120] as const
  */
 export const FFT_SIZES = [1024, 2048, 4096, 8192, 16384, 32768] as const
 
+/**
+ * Curve smoothing, as N in "1/N octave". 0 is off.
+ *
+ * Wider fractions smooth harder. 1/3 is heavy enough to show only broad balance,
+ * 1/24 barely touches the shape.
+ */
+export const SMOOTH_OCTAVES = [0, 48, 24, 12, 6, 3] as const
+
 /** Bars are octave-fraction bands. 1/3 octave is the RTA standard. */
 export const BANDS_PER_OCTAVE = [1, 3, 6] as const
 
@@ -75,6 +83,13 @@ export interface AnalyzerSettings {
   bars: boolean
   /** Bands per octave when drawing bars. */
   bandsPerOctave: number
+  /**
+   * Curve smoothing as N in "1/N octave", 0 for none.
+   *
+   * Bars do not use it: aggregating into octave bands is already the same
+   * operation, so smoothing on top would be applied twice.
+   */
+  smoothOctave: number
   /** Analysis window in FFT points. Trades latency against low-end detail. */
   fftSize: number
 
@@ -95,6 +110,7 @@ export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   peakDecay: 24,
   bars: false,
   bandsPerOctave: 3,
+  smoothOctave: 12,
   fftSize: 2048,
   map: 'magma',
   scrollRate: 60,
