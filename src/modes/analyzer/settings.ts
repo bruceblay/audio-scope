@@ -40,10 +40,13 @@ export const SCROLL_RATES = [15, 30, 60, 120] as const
  * Analysis window, in FFT points. A straight trade of latency against
  * low-frequency detail, so it is a control rather than a constant.
  *
- * 8192 points is a 171 ms window - visibly behind the audio. 1024 is 21 ms and
- * feels immediate, but its bins are 47 Hz wide, which is coarse below 100 Hz.
+ * 1024 points is a 21 ms window that feels immediate, but its bins are 47 Hz
+ * wide, which is coarse below 100 Hz. 32768 is a 683 ms window with 1.5 Hz bins,
+ * which resolves individual low partials but lags badly on anything moving.
+ *
+ * 32768 is the ceiling because that is AnalyserNode's maximum fftSize.
  */
-export const FFT_SIZES = [1024, 2048, 4096, 8192] as const
+export const FFT_SIZES = [1024, 2048, 4096, 8192, 16384, 32768] as const
 
 /** Bars are octave-fraction bands. 1/3 octave is the RTA standard. */
 export const BANDS_PER_OCTAVE = [1, 3, 6] as const

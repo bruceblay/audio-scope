@@ -50,13 +50,14 @@ export interface AudioFrame {
    */
   spectrum: Float32Array
   /**
-   * Second spectrum from a shorter, resizable window.
+   * Second spectrum from a resizable window, 1024 to 32768 points.
    *
    * FFT size is a straight trade of frequency resolution against time
-   * resolution, and the two consumers want opposite ends of it: pitch needs fine
-   * bins, a live display needs a short window or it visibly lags. One analyser
-   * cannot serve both, so there are two. Length varies with the chosen size, so
-   * derive bin width from it rather than assuming.
+   * resolution, and the two consumers want different points on it: pitch needs a
+   * fixed fine-binned window, while a display wants whatever the user picked -
+   * short to feel immediate, long to resolve low partials. One analyser cannot
+   * serve both, so there are two. Length varies with the chosen size, so derive
+   * bin width from it rather than assuming.
    */
   spectrumShort: Float32Array
 

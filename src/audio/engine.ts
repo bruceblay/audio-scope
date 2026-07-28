@@ -213,14 +213,16 @@ export class AudioEngine {
   }
 
   /**
-   * Resize the short-window analyser.
+   * Resize the analyzer's own analyser.
    *
-   * Directly trades latency against low-frequency detail: 8192 points is a
-   * 171 ms window with 5.9 Hz bins, 1024 is 21 ms with 47 Hz bins. Cheap to
-   * change, so it can be a user control.
+   * Directly trades latency against low-frequency detail: 1024 points is a 21 ms
+   * window with 47 Hz bins, 32768 is 683 ms with 1.5 Hz bins. Cheap to change,
+   * so it is a user control.
+   *
+   * 32768 is AnalyserNode's documented maximum; anything above it throws.
    */
   setShortFftSize(size: number) {
-    const clamped = Math.max(256, Math.min(16384, 2 ** Math.round(Math.log2(size))))
+    const clamped = Math.max(256, Math.min(32768, 2 ** Math.round(Math.log2(size))))
     if (clamped === this.shortSize) return
     this.shortSize = clamped
     this.shortSpectrum = new Float32Array(clamped / 2)

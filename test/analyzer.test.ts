@@ -269,6 +269,21 @@ console.log('\n--- WINDOW: the latency/resolution trade is real ---')
     (2048 / SR) * 1000 < 60,
     `${((2048 / SR) * 1000).toFixed(0)} ms against 171 ms before`,
   )
+  // AnalyserNode throws above 32768, so an option beyond it would be a runtime
+  // error rather than a degraded picture.
+  check(
+    'nothing exceeds AnalyserNode\'s maximum',
+    Math.max(...FFT_SIZES) <= 32768,
+    `largest is ${Math.max(...FFT_SIZES)}`,
+  )
+  // Longer windows resolve the low end better, which is the reason to offer
+  // them: a 20 Hz bin has to be narrow enough to separate adjacent partials.
+  const finest = SR / Math.max(...FFT_SIZES)
+  check(
+    'the longest window resolves low partials',
+    finest < 2,
+    `${finest.toFixed(2)} Hz bins at ${Math.max(...FFT_SIZES)} points`,
+  )
 }
 
 // --- Settings ---------------------------------------------------------------
