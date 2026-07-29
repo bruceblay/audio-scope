@@ -37,21 +37,58 @@ const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 const mix = (a, b, t) => a + (b - a) * t
 
 /**
+ * Signed distance to a rounded rectangle centred at the origin.
+ * Negative inside, and the value is the distance to the edge either way.
+ */
+function roundedRect(dx, dy, halfW, halfH, radius) {
+  const qx = Math.abs(dx) - (halfW - radius)
+  const qy = Math.abs(dy) - (halfH - radius)
+  const ox = Math.max(qx, 0)
+  const oy = Math.max(qy, 0)
+  return Math.hypot(ox, oy) + Math.min(Math.max(qx, qy), 0) - radius
+}
+
+/**
  * Render one icon at `size`, supersampled, into an RGBA byte buffer.
  *
- * Geometry is all relative to the radius, so every size is the same drawing
- * rather than a scaled bitmap.
+ * The silhouette is a screen, not a knob.
+ *
+ * A circular body kept the family resemblance to browser-fx, but browser-fx *is*
+ * a knob, so the circle was doing honest work there and none here - it read as a
+ * letter or a zodiac mark rather than an instrument. What identifies an
+ * oscilloscope at a glance is the graticule: a dark rectangular screen ruled into
+ * divisions with a trace across it. Nothing else in the frame says "scope" as
+ * quickly, so the grid is the subject and the wave is what is on it.
+ *
+ * Geometry is all relative to the frame, so every size is the same drawing rather
+ * than a scaled bitmap.
  */
 function render(size) {
   const n = size * SS
   const px = new Float64Array(n * n * 4)
 
+  // Optical sizing. Not the same drawing at every size, on purpose: at 16 px the
+  // frame is fourteen pixels across, and a bezel and a grid and two cycles of a
+  // wave cannot all be legible in that. Small sizes get a thinner frame, no
+  // graticule and a simpler wave, which is standard icon practice and reads far
+  // better than a faithful reduction that turns to mud.
+  const tiny = size <= 16
+
   const c = n / 2
-  const R = c * 0.97
-  const screenR = R * 0.87
-  // Enough cycles to read as a wave at 16 px without becoming a comb.
-  const cycles = 1.5
-  const amp = screenR * 0.55
+  const outerH = n * 0.47
+  const corner = outerH * 0.3
+  const bezel = n * (tiny ? 0.038 : 0.055)
+  const screenH = outerH - bezel
+  const screenCorner = corner - bezel * 0.6
+
+  // 6 x 4 divisions. A real scope rules 10 x 8, which at 16 px is mud; six reads
+  // as a graticule at every size and still blurs gracefully.
+  const divX = 6
+  const divY = 4
+
+  const cycles = tiny ? 1.5 : 2
+  const amp = screenH * 0.58
+  const halfWidth = screenH * 0.96
 
   // --- the trace, as a brightness field ------------------------------------
   // Walked along x and splatted, rather than measured per pixel: distance to a
@@ -61,11 +98,9 @@ function render(size) {
   const steps = n * 4
   // Beam width has a floor in *final* pixels, not supersampled ones. Scaling it
   // purely with size is proportionally correct and practically useless: at 16 px
-  // it works out to 0.4 px, which is a line you cannot see. Small icons need a
-  // proportionally fatter stroke.
-  const sigma = Math.max(1.0, size * 0.026) * SS
+  // it works out under half a pixel, which is a line you cannot see.
+  const sigma = Math.max(tiny ? 1.15 : 0.95, size * 0.023) * SS
   const radius = Math.ceil(sigma * 3)
-  const halfWidth = screenR * 0.94
 
   let prevX = null
   let prevY = null
@@ -102,59 +137,67 @@ function render(size) {
   for (const v of glow) if (v > peak) peak = v
   const inv = peak > 0 ? 1 / peak : 0
 
+  // The grid thins out as the icon shrinks and is dropped entirely at 16, where
+  // it only ever muddied the screen. Same reasoning as the beam-width floor:
+  // legibility is not scale-invariant.
+  const gridAlpha = tiny ? 0 : 0.3 * Math.min(1, size / 48)
+
   // --- compose --------------------------------------------------------------
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
       const i = (y * n + x) * 4
       const dx = x + 0.5 - c
       const dy = y + 0.5 - c
-      const r = Math.hypot(dx, dy)
 
-      if (r > R) continue // transparent outside the instrument
+      const dOuter = roundedRect(dx, dy, outerH, outerH, corner)
+      if (dOuter > 0) continue // transparent outside the instrument
 
+      const dScreen = roundedRect(dx, dy, screenH, screenH, screenCorner)
       let col
-      if (r > screenR) {
-        // Bezel, with a light-catching edge on the upper left so it reads as a
-        // raised ring rather than a flat annulus.
-        const lit = clamp01((-dx - dy) / (R * 1.6) + 0.35)
-        const rim = clamp01((r - screenR) / (R - screenR))
-        const t = lit * 0.5 * Math.pow(rim, 1.5)
-        col = [mix(BODY[0], BEZEL_HI[0], t), mix(BODY[1], BEZEL_HI[1], t), mix(BODY[2], BEZEL_HI[2], t)]
 
-        // A lit tube spills onto its bezel. This is also what gives the icon its
-        // colour away from the trace, the job browser-fx's green arc does.
-        const spill = clamp01(1 - (r - screenR) / (R - screenR)) ** 2 * 0.5
+      if (dScreen > 0) {
+        // Bezel, with a light-catching edge on the upper left so it reads as a
+        // raised frame rather than a flat border.
+        const lit = clamp01((-dx - dy) / (outerH * 1.6) + 0.4)
         col = [
-          Math.min(255, col[0] + CORE[0] * spill * 0.25),
-          Math.min(255, col[1] + CORE[1] * spill * 0.25),
-          Math.min(255, col[2] + CORE[2] * spill * 0.25),
+          mix(BODY[0], BEZEL_HI[0], lit * 0.55),
+          mix(BODY[1], BEZEL_HI[1], lit * 0.55),
+          mix(BODY[2], BEZEL_HI[2], lit * 0.55),
         ]
       } else {
         col = [...SCREEN]
 
-        // Graticule: faint enough that it adds texture at 128 px and disappears
-        // by 16, which is the correct behaviour rather than a compromise.
-        const cell = screenR / 2
-        const gx = Math.abs(((dx + cell * 10) % cell) - cell / 2)
-        const gy = Math.abs(((dy + cell * 10) % cell) - cell / 2)
-        const line = Math.max(0, 1 - Math.min(gx, gy) / (n * 0.0045))
-        if (line > 0) {
-          const a = line * 0.16
-          col = [mix(col[0], GRATICULE[0], a), mix(col[1], GRATICULE[1], a), mix(col[2], GRATICULE[2], a)]
+        // Graticule. The centre rules are brighter, as they are on a real
+        // faceplate, which also keeps a cross visible once the rest has blurred
+        // away at small sizes.
+        const cellX = (screenH * 2) / divX
+        const cellY = (screenH * 2) / divY
+        const lineW = n * 0.006
+        const fx = Math.abs(((dx + screenH + cellX * 10) % cellX) - cellX / 2)
+        const fy = Math.abs(((dy + screenH + cellY * 10) % cellY) - cellY / 2)
+        const grid = Math.max(0, 1 - Math.min(fx, fy) / lineW)
+        const axis = Math.max(
+          0,
+          1 - Math.min(Math.abs(dx), Math.abs(dy)) / (lineW * 1.3),
+        )
+        const a = clamp01(grid * gridAlpha + axis * gridAlpha * 1.5)
+        if (a > 0) {
+          col = [
+            mix(col[0], GRATICULE[0], a),
+            mix(col[1], GRATICULE[1], a),
+            mix(col[2], GRATICULE[2], a),
+          ]
         }
 
         // Trace. Additive, and saturating toward the bloom colour at the
         // brightest points, exactly as a real phosphor does.
-        const g = clamp01(glow[y * n + x] * inv * 3.4)
+        const g = clamp01(glow[y * n + x] * inv * 3.2)
         if (g > 0) {
-          const white = clamp01((g - 0.62) / 0.38)
-          const tr = mix(CORE[0], BLOOM[0], white)
-          const tg = mix(CORE[1], BLOOM[1], white)
-          const tb = mix(CORE[2], BLOOM[2], white)
+          const white = clamp01((g - 0.6) / 0.4)
           col = [
-            Math.min(255, col[0] + tr * g),
-            Math.min(255, col[1] + tg * g),
-            Math.min(255, col[2] + tb * g),
+            Math.min(255, col[0] + mix(CORE[0], BLOOM[0], white) * g),
+            Math.min(255, col[1] + mix(CORE[1], BLOOM[1], white) * g),
+            Math.min(255, col[2] + mix(CORE[2], BLOOM[2], white) * g),
           ]
         }
       }
