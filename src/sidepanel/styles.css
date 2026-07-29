@@ -186,10 +186,15 @@ body {
   flex: 1;
   align-self: center;
   padding-left: 12px;
+  /* Exactly the active-tab treatment, so the header reads the same whichever
+     view is showing. Uppercase and the same size, weight, tracking and colour as
+     a selected tab; only the left alignment differs, because it labels the view
+     rather than offering a choice between two. */
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #fff;
+  text-transform: uppercase;
+  color: var(--text);
   user-select: none;
 }
 
