@@ -67,17 +67,18 @@ function render(size) {
   const n = size * SS
   const px = new Float64Array(n * n * 4)
 
-  // Optical sizing. Not the same drawing at every size, on purpose: at 16 px the
-  // frame is fourteen pixels across, and a bezel and a grid and two cycles of a
-  // wave cannot all be legible in that. Small sizes get a thinner frame, no
-  // graticule and a simpler wave, which is standard icon practice and reads far
-  // better than a faithful reduction that turns to mud.
-  const tiny = size <= 16
-
+  // Every size is the same drawing.
+  //
+  // 16 px used to get a simplified treatment - thinner frame, no graticule, one
+  // and a half cycles instead of two - on the reasoning that a faithful reduction
+  // turns to mud. Legible in isolation, but Chrome shows 16 in the toolbar and 48
+  // in the extensions list at the same moment, and the two read as different
+  // icons. A slightly muddy 16 that is recognisably the same mark beats a crisp
+  // one that is not.
   const c = n / 2
   const outerH = n * 0.47
   const corner = outerH * 0.3
-  const bezel = n * (tiny ? 0.038 : 0.055)
+  const bezel = n * 0.055
   const screenH = outerH - bezel
   const screenCorner = corner - bezel * 0.6
 
@@ -86,7 +87,7 @@ function render(size) {
   const divX = 6
   const divY = 4
 
-  const cycles = tiny ? 1.5 : 2
+  const cycles = 2
   const amp = screenH * 0.58
   const halfWidth = screenH * 0.96
 
@@ -102,7 +103,7 @@ function render(size) {
   // The floor exists so 16 px is visible at all. Applying it at 32 as well made
   // the toolbar icon's beam proportionally fatter than the 48 px one in the
   // extensions list, which is why the two did not match.
-  const sigma = Math.max(tiny ? 1.15 : 0.72, size * 0.023) * SS
+  const sigma = Math.max(0.72, size * 0.023) * SS
   const radius = Math.ceil(sigma * 3)
 
   let prevX = null
@@ -143,10 +144,10 @@ function render(size) {
   // The grid thins out as the icon shrinks and is dropped entirely at 16, where
   // it only ever muddied the screen. Same reasoning as the beam-width floor:
   // legibility is not scale-invariant.
-  // Flat above 16 rather than fading in with size. Fading it meant the 32 px
-  // toolbar icon showed a fainter grid than the 48 px one, and the grid is the
-  // thing that says "oscilloscope".
-  const gridAlpha = tiny ? 0 : 0.3
+  // Flat across sizes. Fading it with size meant the 32 px toolbar icon showed a
+  // fainter graticule than the 48 px one in the extensions list, and the
+  // graticule is the thing that says "oscilloscope".
+  const gridAlpha = 0.3
 
   // --- compose --------------------------------------------------------------
   for (let y = 0; y < n; y++) {
