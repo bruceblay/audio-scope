@@ -2,7 +2,7 @@
   "name": "audio-scope",
   "displayName": "Audio Scope",
   "version": "0.1.0",
-  "description": "A real oscilloscope and cymatic plate for any browser tab. Triggered time-domain scope with CRT phosphor rendering, plus a physically simulated Chladni plate driven by detected pitch.",
+  "description": "A real oscilloscope for any tab: triggered CRT trace, X-Y stereo field, spectrum analyzer and waterfall.",
   "author": "Bruce Blay <bruceblay@gmail.com>",
   "license": "ISC",
   "private": true,
@@ -19,7 +19,8 @@
     "test:cymatics": "esbuild test/cymatics.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/cymatics.test.mjs && node node_modules/.cache/cymatics.test.mjs",
     "test:sand": "esbuild test/sand.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/sand.test.mjs && node node_modules/.cache/sand.test.mjs",
     "test:analyzer": "esbuild test/analyzer.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/analyzer.test.mjs && node node_modules/.cache/analyzer.test.mjs",
-    "test:meters": "esbuild test/meters.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/meters.test.mjs && node node_modules/.cache/meters.test.mjs"
+    "test:meters": "esbuild test/meters.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/meters.test.mjs && node node_modules/.cache/meters.test.mjs",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
