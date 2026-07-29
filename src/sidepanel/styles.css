@@ -365,29 +365,37 @@ body {
   color: var(--faint);
 }
 
-/* The control rail's own handle.
+/* The control rail's own header, and the thing that collapses it.
    
-   Sits directly on top of what it folds away, which is most of what makes it
-   legible: an icon in the header is nowhere near the thing it acts on, and no
-   glyph small enough to fit there can explain the relationship on its own. Full
-   width, so it also reads as an edge to grab rather than a button to hunt for. */
+   Sits directly on top of what it folds away, so its position does most of the
+   explaining. It carries a word as well as a chevron: the first version was a
+   bare glyph on `--rail`, the same colour as the readouts directly above, which
+   made a sixteen-pixel strip that read as part of that block and could not be
+   found at all. A named, full-width row cannot go missing. */
 .rail-handle {
   flex: none;
   width: 100%;
-  height: 16px;
+  height: 26px;
   border: 0;
-  padding: 0;
-  background: var(--rail);
-  color: var(--faint);
-  display: grid;
-  place-items: center;
+  padding: 0 10px;
+  background: var(--control);
+  color: var(--legend);
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--highlight);
   transition: color var(--fast), background var(--fast);
 }
 
 .rail-handle:hover {
   color: var(--text);
-  background: var(--control);
+  background: var(--raised);
+}
+
+.rail-handle:hover .legend {
+  color: var(--text);
 }
 
 .rail-handle:focus-visible {
@@ -947,11 +955,13 @@ body {
 }
 
 :root[data-theme='tek'] .rail-handle {
-  background: var(--rail);
-  color: #6f7268;
+  background: linear-gradient(var(--raised), var(--control));
+  color: var(--legend);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 0 var(--line);
 }
 
 :root[data-theme='tek'] .rail-handle:hover {
-  background: #bcb8ac;
-  color: var(--text);
+  background: linear-gradient(#f4f1ea, var(--raised));
 }

@@ -497,6 +497,7 @@ export function App() {
         title={showControls ? 'Hide controls' : 'Show controls'}
         onClick={() => setShowControls((v) => !v)}
       >
+        <span className="legend">Controls</span>
         {showControls ? <ChevronDown /> : <ChevronUp />}
       </button>
 
