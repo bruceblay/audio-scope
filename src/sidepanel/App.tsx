@@ -26,6 +26,7 @@ import {
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
+import { InfoGlyph, MinusGlyph, PlusGlyph } from '../ui/glyphs'
 import { AboutView } from './AboutView'
 import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
@@ -423,7 +424,7 @@ export function App() {
           title={showControls ? 'Hide controls' : 'Show controls'}
           onClick={() => setShowControls((v) => !v)}
         >
-          {showControls ? '\u2013' : '+'}
+          {showControls ? <MinusGlyph /> : <PlusGlyph />}
         </button>
         <button
           type="button"
@@ -432,7 +433,7 @@ export function App() {
           title="About Audio Scope"
           onClick={() => setShowAbout(true)}
         >
-          i
+          <InfoGlyph />
         </button>
       </div>
       <div className="seam" />

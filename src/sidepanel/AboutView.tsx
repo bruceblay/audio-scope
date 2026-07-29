@@ -6,6 +6,8 @@
  * out by poking at it are the capture-rights rule and what the trigger is for,
  * so those get the most room.
  */
+import { CloseGlyph } from '../ui/glyphs'
+
 export function AboutView({ onClose }: { onClose: () => void }) {
   return (
     <div className="app">
@@ -17,7 +19,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           aria-label="Close about"
           onClick={onClose}
         >
-          ✕
+          <CloseGlyph />
         </button>
       </div>
       <div className="seam" />
