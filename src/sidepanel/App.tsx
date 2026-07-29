@@ -26,7 +26,7 @@ import {
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
-import { InfoGlyph, MinusGlyph, PlusGlyph } from '../ui/glyphs'
+import { ChevronDown, ChevronUp, InfoGlyph } from '../ui/glyphs'
 import { AboutView } from './AboutView'
 import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
@@ -419,16 +419,6 @@ export function App() {
         <button
           type="button"
           className="info-btn"
-          aria-label={showControls ? 'Hide controls' : 'Show controls'}
-          aria-expanded={showControls}
-          title={showControls ? 'Hide controls' : 'Show controls'}
-          onClick={() => setShowControls((v) => !v)}
-        >
-          {showControls ? <MinusGlyph /> : <PlusGlyph />}
-        </button>
-        <button
-          type="button"
-          className="info-btn"
           aria-label="About Audio Scope"
           title="About Audio Scope"
           onClick={() => setShowAbout(true)}
@@ -498,6 +488,17 @@ export function App() {
         )}
       </div>
       <div className="seam" />
+
+      <button
+        type="button"
+        className="rail-handle"
+        aria-label={showControls ? 'Hide controls' : 'Show controls'}
+        aria-expanded={showControls}
+        title={showControls ? 'Hide controls' : 'Show controls'}
+        onClick={() => setShowControls((v) => !v)}
+      >
+        {showControls ? <ChevronDown /> : <ChevronUp />}
+      </button>
 
       <div className="controls" hidden={!showControls}>
         {isCymatics ? (

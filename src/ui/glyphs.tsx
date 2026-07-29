@@ -37,14 +37,18 @@ export const CloseGlyph = () => (
   </svg>
 )
 
-export const MinusGlyph = () => (
-  <svg {...base} aria-hidden="true">
-    <path d="M4.2 8h7.6" />
+/**
+ * Disclosure chevrons, pointing the way the panel will travel: down to fold the
+ * control rail away, up to bring it back.
+ */
+export const ChevronDown = () => (
+  <svg {...base} width="13" height="13" strokeWidth={2} aria-hidden="true">
+    <path d="M4 6.5l4 4 4-4" strokeLinejoin="round" />
   </svg>
 )
 
-export const PlusGlyph = () => (
-  <svg {...base} aria-hidden="true">
-    <path d="M4.2 8h7.6M8 4.2v7.6" />
+export const ChevronUp = () => (
+  <svg {...base} width="13" height="13" strokeWidth={2} aria-hidden="true">
+    <path d="M4 9.5l4-4 4 4" strokeLinejoin="round" />
   </svg>
 )
