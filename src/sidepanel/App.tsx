@@ -146,6 +146,7 @@ export function App() {
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
   const [showAbout, setShowAbout] = useState(false)
+  const [showControls, setShowControls] = useState(true)
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -417,6 +418,16 @@ export function App() {
         <button
           type="button"
           className="info-btn"
+          aria-label={showControls ? 'Hide controls' : 'Show controls'}
+          aria-expanded={showControls}
+          title={showControls ? 'Hide controls' : 'Show controls'}
+          onClick={() => setShowControls((v) => !v)}
+        >
+          {showControls ? '\u2013' : '+'}
+        </button>
+        <button
+          type="button"
+          className="info-btn"
           aria-label="About Audio Scope"
           title="About Audio Scope"
           onClick={() => setShowAbout(true)}
@@ -487,7 +498,7 @@ export function App() {
       </div>
       <div className="seam" />
 
-      <div className="controls">
+      <div className="controls" hidden={!showControls}>
         {isCymatics ? (
           <CymaticsPanel settings={cymatics} patch={patchCymatics} />
         ) : isAnalyzer ? (
