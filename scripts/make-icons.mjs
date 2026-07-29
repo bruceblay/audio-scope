@@ -99,7 +99,10 @@ function render(size) {
   // Beam width has a floor in *final* pixels, not supersampled ones. Scaling it
   // purely with size is proportionally correct and practically useless: at 16 px
   // it works out under half a pixel, which is a line you cannot see.
-  const sigma = Math.max(tiny ? 1.15 : 0.95, size * 0.023) * SS
+  // The floor exists so 16 px is visible at all. Applying it at 32 as well made
+  // the toolbar icon's beam proportionally fatter than the 48 px one in the
+  // extensions list, which is why the two did not match.
+  const sigma = Math.max(tiny ? 1.15 : 0.72, size * 0.023) * SS
   const radius = Math.ceil(sigma * 3)
 
   let prevX = null
@@ -140,7 +143,10 @@ function render(size) {
   // The grid thins out as the icon shrinks and is dropped entirely at 16, where
   // it only ever muddied the screen. Same reasoning as the beam-width floor:
   // legibility is not scale-invariant.
-  const gridAlpha = tiny ? 0 : 0.3 * Math.min(1, size / 48)
+  // Flat above 16 rather than fading in with size. Fading it meant the 32 px
+  // toolbar icon showed a fainter grid than the 48 px one, and the grid is the
+  // thing that says "oscilloscope".
+  const gridAlpha = tiny ? 0 : 0.3
 
   // --- compose --------------------------------------------------------------
   for (let y = 0; y < n; y++) {
@@ -172,7 +178,9 @@ function render(size) {
         // away at small sizes.
         const cellX = (screenH * 2) / divX
         const cellY = (screenH * 2) / divY
-        const lineW = n * 0.006
+        // Grid lines need a floor in final pixels for the same reason the beam
+        // does: at 32 px a proportional line is a fifth of a pixel and washes out.
+        const lineW = Math.max(0.42, size * 0.006) * SS
         const fx = Math.abs(((dx + screenH + cellX * 10) % cellX) - cellX / 2)
         const fy = Math.abs(((dy + screenH + cellY * 10) % cellY) - cellY / 2)
         const grid = Math.max(0, 1 - Math.min(fx, fy) / lineW)
