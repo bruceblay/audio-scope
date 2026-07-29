@@ -26,6 +26,7 @@ import {
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
+import { AboutView } from './AboutView'
 import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
 import { ScopePanel, ScopeReadouts } from './ScopeControls'
@@ -144,7 +145,7 @@ export function App() {
   const [error, setError] = useState<
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
-  const [showControls, setShowControls] = useState(true)
+  const [showAbout, setShowAbout] = useState(false)
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -396,6 +397,8 @@ export function App() {
   const dim = !connected
   const needsInvocation = !!error && error.recoverable
 
+  if (showAbout) return <AboutView onClose={() => setShowAbout(false)} />
+
   return (
     <div className="app">
       <div className="tabs" role="tablist" aria-label="Visualization mode">
@@ -413,13 +416,12 @@ export function App() {
         ))}
         <button
           type="button"
-          className="icon-btn"
-          aria-label={showControls ? 'Hide controls' : 'Show controls'}
-          aria-expanded={showControls}
-          onClick={() => setShowControls((v) => !v)}
-          style={{ alignSelf: 'center', marginRight: 6 }}
+          className="info-btn"
+          aria-label="About Audio Scope"
+          title="About Audio Scope"
+          onClick={() => setShowAbout(true)}
         >
-          {showControls ? '▾' : '▴'}
+          i
         </button>
       </div>
       <div className="seam" />
@@ -485,7 +487,7 @@ export function App() {
       </div>
       <div className="seam" />
 
-      <div className="controls" hidden={!showControls}>
+      <div className="controls">
         {isCymatics ? (
           <CymaticsPanel settings={cymatics} patch={patchCymatics} />
         ) : isAnalyzer ? (

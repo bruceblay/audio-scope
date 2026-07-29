@@ -152,6 +152,100 @@ body {
   outline-offset: -3px;
 }
 
+/* Circular bordered glyph button, the shape browser-fx uses in its title bar. */
+.info-btn {
+  flex: none;
+  align-self: center;
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--fast), border-color var(--fast);
+}
+
+.info-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.info-btn:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- about -- */
+
+.about-title {
+  flex: 1;
+  align-self: center;
+  padding-left: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  user-select: none;
+}
+
+.about {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 14px 24px;
+  font-size: 12px;
+  line-height: 1.62;
+  color: var(--legend);
+}
+
+.about p {
+  margin: 0 0 10px;
+}
+
+.about strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Section headings, lowercase and tracked, matching browser-fx's about view. */
+.about h4 {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--text);
+}
+
+.about ul,
+.about ol {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.about li {
+  margin-bottom: 7px;
+}
+
+/* Set apart because it is the one thing that will otherwise look like a bug. */
+.about-note {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--live);
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 0 3px 3px 0;
+}
+
 /* --------------------------------------------------------------- stage -- */
 
 .stage {
@@ -797,4 +891,14 @@ body {
   box-shadow:
     0 0 0 2px var(--bezel-lip),
     inset 0 2px 8px rgba(0, 0, 0, 0.75);
+}
+
+:root[data-theme='tek'] .about {
+  background: var(--chassis);
+  color: #3f423b;
+}
+
+:root[data-theme='tek'] .about-note {
+  background: rgba(0, 0, 0, 0.045);
+  border-left-color: var(--tek-red);
 }
