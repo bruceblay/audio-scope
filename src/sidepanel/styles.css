@@ -673,10 +673,12 @@ body {
   margin-bottom: 0;
 }
 
+/* No align-items: the default stretch is the point. Banks sharing a line get
+   the line's height, so a nearly-empty bank (ARP collapsed to its Run switch)
+   stands as tall as its neighbours instead of hanging short. */
 .banks {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
   gap: 7px 5px;
   margin-top: 9px;
 }
@@ -691,6 +693,8 @@ body {
    space-evenly on the contents, so a bank that grows distributes the gain to the
    gaps between its controls instead of piling it at one end. */
 .bank {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
   padding: 5px 7px 6px;
@@ -715,8 +719,12 @@ body {
    empty box with controls in one corner into a spread panel section. Bottom
    alignment puts every control's name on the same line, since names sit under
    their controls and the controls vary in height. */
+/* flex: 1 fills the stretched bank, and with flex-end the controls ride the
+   bottom edge - so every name across the whole line sits on one row, even when
+   the banks hold different amounts. */
 .bank-row {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-evenly;
@@ -735,6 +743,18 @@ body {
 
 .cell > :first-child {
   margin-bottom: 5px;
+}
+
+/* The arpeggiator's controls when Run is off: present, dimmed, dead. The wrapper
+   is display: contents so its children stay direct flex items of the bank row
+   and space out exactly as when live. */
+.arp-rest {
+  display: contents;
+}
+
+.arp-rest[inert] > * {
+  opacity: 0.38;
+  transition: opacity var(--fast);
 }
 
 /* Switches inside a bank are tighter than the ones in the scope's rows: they sit

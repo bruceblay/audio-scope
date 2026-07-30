@@ -220,6 +220,27 @@ export function SynthPanel({
             />
           </Bank>
 
+          {/* Output volume is not an oscillator parameter; it closes the audio
+              chain: osc, filter, envelope, out. */}
+          <Bank name="Out">
+            <Knob
+              label="Level"
+              value={settings.level}
+              min={0}
+              max={1}
+              step={0.01}
+              reset={0.5}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(level) => patch({ level })}
+            />
+          </Bank>
+
+          {/* After the audio chain, not inside it. The arpeggiator is a
+              performance control, so it sits last - nearest the keyboard it
+              drives. Ordering it after Out also means a wrap can never leave
+              the single-knob Out bank alone on a line: anything that pushes
+              Out down brings Arp down with it. */
+          }
           <Bank name="Arp">
             <Cell name="Run">
               <Toggle
@@ -228,8 +249,11 @@ export function SynthPanel({
                 onChange={(arpOn) => patch({ arpOn })}
               />
             </Cell>
-            {settings.arpOn && (
-              <>
+            {/* Off does not unmount the section: the controls stay in place and
+                go inert, like a hardware panel whose arp is disengaged. Removing
+                them made the bank collapse to a lone Run switch stranded in a
+                full-width band, and read as controls being deleted. */}
+            <div className="arp-rest" inert={!settings.arpOn}>
                 <Cell name="Mode">
                   <Segmented<ArpMode>
                     label="Arpeggiator mode"
@@ -272,23 +296,7 @@ export function SynthPanel({
                     onChange={(arpLatch) => patch({ arpLatch })}
                   />
                 </Cell>
-              </>
-            )}
-          </Bank>
-
-          {/* Output volume is not an oscillator parameter; it gets its own
-              section at the end of the chain, where the signal actually is. */}
-          <Bank name="Out">
-            <Knob
-              label="Level"
-              value={settings.level}
-              min={0}
-              max={1}
-              step={0.01}
-              reset={0.5}
-              format={(v) => `${Math.round(v * 100)}%`}
-              onChange={(level) => patch({ level })}
-            />
+            </div>
           </Bank>
         </div>
       )}

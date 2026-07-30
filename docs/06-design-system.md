@@ -230,10 +230,24 @@ Two more rules that came out of the same review:
   all the names on one line.
 - **Group by signal chain, not by convenience.** Level had been dropped into the
   OSC bank because there was room. It is output volume, not an oscillator
-  parameter, so it gets its own OUT section at the end - which is exactly the
-  Minimoog's panel order: Oscillator Bank, Filter, Envelope (Modifiers), Output.
-  Octave and Detune stay with OSC because they are pitch controls (the Minimoog
-  calls octave "Range" and puts it in the oscillator bank).
+  parameter, so it gets its own OUT section closing the audio chain - which is
+  the Minimoog's panel order: Oscillator Bank, Filter, Envelope (Modifiers),
+  Output. Octave and Detune stay with OSC because they are pitch controls (the
+  Minimoog calls octave "Range" and puts it in the oscillator bank). ARP comes
+  after OUT: the arpeggiator is not in the audio chain at all, it is a
+  performance control, so it sits last, nearest the keyboard it drives. That
+  order is also what keeps the wrap sane - the single-knob OUT bank can never
+  strand alone on a line, because anything that pushes OUT down brings ARP with
+  it.
+- **Banks on a line share the line's height.** Flex stretch (the default that
+  `align-items: flex-start` had been suppressing), with each bank's control row
+  growing and bottom-aligned, so a shorter bank stands as tall as its
+  neighbours and every name across the whole line sits on one row.
+- **A disengaged section dims; it does not unmount.** With the arp off, Mode,
+  Rate, Octaves and Latch stay in place, dimmed and inert, like hardware whose
+  arp is disengaged. Unmounting them collapsed the bank to a lone Run switch
+  stranded in a full-width band, and read as controls being deleted - which it
+  was mistaken for, in review, once already.
 
 Each failure here was invisible at one panel width and obvious at another, so
 layout changes are checked by screenshotting the real stylesheet at 360 and
