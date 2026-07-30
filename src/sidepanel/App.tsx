@@ -8,6 +8,7 @@ import {
   type TabTarget,
 } from '../audio/capture'
 import { AudioEngine } from '../audio/engine'
+import { DEFAULT_SYNTH, Synth, type SynthSettings } from '../audio/synth'
 import {
   DEFAULT_ANALYZER_SETTINGS,
   type AnalyzerReadout,
@@ -27,10 +28,12 @@ import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
 import { ChevronDown, ChevronUp, InfoGlyph } from '../ui/glyphs'
+import { Keyboard } from '../ui/Keyboard'
 import { AboutView } from './AboutView'
 import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
 import { ScopePanel, ScopeReadouts } from './ScopeControls'
+import { SynthPanel } from './SynthControls'
 
 // Bumping this discards stored preferences. Done deliberately when a default
 // changes, since merge-on-load means a saved value always wins and a new default
@@ -51,6 +54,8 @@ const STORE_KEY = 'settings.v3'
  * later default change can actually reach them.
  */
 const DEFAULTS = {
+  synth: DEFAULT_SYNTH,
+  octave: 3,
   scope: DEFAULT_SCOPE_SETTINGS,
   cymatics: DEFAULT_CYMATICS_SETTINGS,
   analyzer: DEFAULT_ANALYZER_SETTINGS,
@@ -139,6 +144,7 @@ export function App() {
   // One engine for the life of the panel. Created here rather than in an effect
   // so it survives StrictMode's double-invoke.
   const [engine] = useState(() => new AudioEngine())
+  const [synth] = useState(() => new Synth())
 
   const [target, setTarget] = useState<TabTarget | null>(null)
   const [connected, setConnected] = useState(false)
@@ -148,6 +154,9 @@ export function App() {
   >(null)
   const [showAbout, setShowAbout] = useState(false)
   const [showControls, setShowControls] = useState(true)
+  const [synthSettings, setSynthSettings] = useState<SynthSettings>(DEFAULT_SYNTH)
+  const [octave, setOctave] = useState(DEFAULTS.octave)
+  const [sounding, setSounding] = useState<Set<number>>(() => new Set())
 
   const [mode, setMode] = useState<ModeId>('scope')
   const [theme, setTheme] = useState<ThemeId>('dark')
@@ -318,6 +327,35 @@ export function App() {
     }
   }, [engine])
 
+  // --- Synth ---------------------------------------------------------------
+  // Enabling builds the audio graph if no tab is captured, which is the whole
+  // point: the synth has to work as a signal source on its own.
+  useEffect(() => {
+    let cancelled = false
+    if (!synthSettings.enabled) {
+      synth.update(synthSettings)
+      return
+    }
+    engine.ensureContext().then((ctx) => {
+      if (cancelled) return
+      const bus = engine.analysisBus
+      if (bus) synth.connect(ctx, bus)
+      synth.update(synthSettings)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [engine, synth, synthSettings])
+
+  // Held notes live in the Synth, which owns latch and arpeggiator state, so the
+  // keyboard's lit keys are pushed here rather than mirrored.
+  useEffect(() => {
+    synth.setNotesChangedHandler(() => setSounding(new Set(synth.sounding)))
+    return () => synth.setNotesChangedHandler(null)
+  }, [synth])
+
+  useEffect(() => () => synth.dispose(), [synth])
+
   // The analyzer's window size is an engine concern: it resizes a dedicated
   // AnalyserNode rather than the one pitch detection depends on.
   useEffect(() => {
@@ -347,6 +385,8 @@ export function App() {
         | Partial<{
             mode: ModeId
             theme: ThemeId
+            synth: SynthSettings
+            octave: number
             scope: ScopeSettings
             cymatics: CymaticsSettings
             analyzer: AnalyzerSettings
@@ -358,6 +398,10 @@ export function App() {
       // A profile that last used cymatics must not restore into a hidden mode.
       if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
       if (saved.theme) setTheme(saved.theme)
+      if (typeof saved.octave === 'number') setOctave(saved.octave)
+      // Enabled is deliberately not restored: an extension that starts making
+      // noise on open is hostile, however the setting was left.
+      setSynthSettings((prev) => ({ ...adopt(prev, saved.synth, was?.synth), enabled: false }))
       setScope((prev) => adopt(prev, saved.scope, was?.scope))
       setCymatics((prev) => adopt(prev, saved.cymatics, was?.cymatics))
       setAnalyzer((prev) => adopt(prev, saved.analyzer, was?.analyzer))
@@ -368,12 +412,30 @@ export function App() {
     const id = window.setTimeout(() => {
       chrome.storage.sync
         .set({
-          [STORE_KEY]: { mode, theme, scope, cymatics, analyzer, defaults: DEFAULTS },
+          [STORE_KEY]: {
+            mode,
+            theme,
+            octave,
+            synth: synthSettings,
+            scope,
+            cymatics,
+            analyzer,
+            defaults: DEFAULTS,
+          },
         })
         .catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, theme, scope, cymatics, analyzer])
+  }, [mode, theme, octave, synthSettings, scope, cymatics, analyzer])
+
+  const patchSynth = useCallback(
+    (next: Partial<SynthSettings>) => setSynthSettings((prev) => ({ ...prev, ...next })),
+    [],
+  )
+  const shiftOctave = useCallback(
+    (delta: number) => setOctave((v) => Math.max(1, Math.min(6, v + delta))),
+    [],
+  )
 
   const patchScope = useCallback(
     (next: Partial<ScopeSettings>) => setScope((prev) => ({ ...prev, ...next })),
@@ -441,7 +503,7 @@ export function App() {
               : (r) => setScopeReadout(r as ScopeReadout)
         }
       >
-        {!connected && (
+        {!connected && !synthSettings.enabled && (
           <div className="stage-overlay">
             {error ? (
               <>
@@ -509,6 +571,12 @@ export function App() {
         ) : (
           <ScopePanel settings={scope} patch={patchScope} />
         )}
+        <SynthPanel
+          settings={synthSettings}
+          patch={patchSynth}
+          octave={octave}
+          onOctave={setOctave}
+        />
         <Group title="Instrument">
           <Row label="Panel">
             <Segmented<ThemeId>
@@ -523,6 +591,18 @@ export function App() {
           </Row>
         </Group>
       </div>
+
+      {synthSettings.enabled && (
+        <div className="synth-strip">
+          <Keyboard
+            root={(octave + 1) * 12}
+            sounding={sounding}
+            onNoteOn={(m) => synth.noteOn(m)}
+            onNoteOff={(m) => synth.noteOff(m)}
+            onOctaveShift={shiftOctave}
+          />
+        </div>
+      )}
 
       <div className="source">
         <span

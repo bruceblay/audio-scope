@@ -579,6 +579,102 @@ body {
   border-radius: 3px;
 }
 
+/* ------------------------------------------------------------ keyboard -- */
+
+/* Outside the collapsible rail on purpose: the synth exists so you can watch the
+   scope while playing it, and a keyboard buried at the bottom of a scrolling
+   panel makes that impossible. */
+.synth-strip {
+  flex: none;
+  padding: 8px 10px;
+  background: var(--rail);
+  box-shadow: inset 0 1px 0 var(--highlight);
+}
+
+.keys {
+  position: relative;
+  height: 60px;
+  user-select: none;
+  touch-action: none;
+}
+
+.keys-white {
+  display: flex;
+  gap: 2px;
+  height: 100%;
+}
+
+.keys-black {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.key {
+  border: 0;
+  padding: 0 0 5px;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: background var(--fast), box-shadow var(--fast);
+}
+
+.key-white {
+  flex: 1;
+  min-width: 0;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(#eceae2, #cfccc2);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgba(0, 0, 0, 0.55);
+  color: #8d8a80;
+}
+
+.key-white:hover {
+  background: linear-gradient(#f6f4ee, #dedbd1);
+}
+
+.key-black {
+  position: absolute;
+  top: 0;
+  width: 9%;
+  height: 62%;
+  /* Centred on the seam rather than starting at it, which is where a real
+     keyboard puts them. */
+  transform: translateX(-50%);
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(#33383d, #16181b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 3px rgba(0, 0, 0, 0.6);
+  color: #7b828a;
+  pointer-events: auto;
+}
+
+.key-black:hover {
+  background: linear-gradient(#3f454b, #1d2024);
+}
+
+/* Lit from the Synth's own note set, so latched and arpeggiated notes light up
+   as well as held ones. */
+.key.is-on {
+  background: linear-gradient(#7dffab, #2bd964);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 10px rgba(61, 220, 132, 0.55);
+  color: #0d3a1e;
+}
+
+.key-code {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
 /* ---------------------------------------------------------- source bar -- */
 
 .source {

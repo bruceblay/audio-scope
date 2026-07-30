@@ -24,6 +24,15 @@ export class AudioEngine {
   private ctx: AudioContext | null = null
   private stream: MediaStream | null = null
   private source: MediaStreamAudioSourceNode | null = null
+  /**
+   * Everything that should be heard and measured connects here.
+   *
+   * The graph used to be built inside attach(), which hard-wired the assumption
+   * that a captured tab is the only possible source. A shared bus lets the
+   * built-in synth feed the same analysers and the same output, with or without
+   * a tab attached, and lets both run at once.
+   */
+  private bus: GainNode | null = null
   private splitter: ChannelSplitterNode | null = null
   private analyserL: AnalyserNode | null = null
   private analyserR: AnalyserNode | null = null
@@ -113,33 +122,30 @@ export class AudioEngine {
   }
 
   /**
-   * Route a captured stream into the graph. Playback to ctx.destination is
-   * mandatory: tabCapture *redirects* the tab's audio, so without this the tab
-   * goes silent.
+   * Build the context, the bus and the analysers if they do not exist yet.
+   *
+   * Separate from attach() because the synth needs an audio graph with no tab
+   * captured at all. Must be called from a user gesture, or the context starts
+   * suspended and stays that way.
    */
-  async attach(stream: MediaStream) {
-    this.detach()
-
-    // The context is created once and reused across attach cycles. One context
-    // per capture leaks them, and Chrome caps how many a page may have.
-    if (!this.ctx) {
-      this.ctx = new AudioContext({ latencyHint: 'interactive' })
-    }
+  async ensureContext(): Promise<AudioContext> {
+    // The context is created once and reused. One per capture leaks them, and
+    // Chrome caps how many a page may have.
+    if (!this.ctx) this.ctx = new AudioContext({ latencyHint: 'interactive' })
     if (this.ctx.state === 'suspended') await this.ctx.resume()
     const ctx = this.ctx
+    if (this.bus) return ctx
 
-    this.stream = stream
-    this.source = ctx.createMediaStreamSource(stream)
-
+    this.bus = ctx.createGain()
     this.outputGain = ctx.createGain()
     this.outputGain.gain.value = 1
-    this.source.connect(this.outputGain)
+    this.bus.connect(this.outputGain)
     this.outputGain.connect(ctx.destination)
 
     // AnalyserNode downmixes to mono, so stereo work needs the split. X-Y mode
     // depends on having L and R as independent signals.
     this.splitter = ctx.createChannelSplitter(2)
-    this.source.connect(this.splitter)
+    this.bus.connect(this.splitter)
 
     this.analyserL = makeAnalyser(ctx, TIME_SIZE)
     this.analyserR = makeAnalyser(ctx, TIME_SIZE)
@@ -147,12 +153,34 @@ export class AudioEngine {
     this.splitter.connect(this.analyserR, 1)
 
     this.analyserFFT = makeAnalyser(ctx, FFT_SIZE)
-    this.source.connect(this.analyserFFT)
+    this.bus.connect(this.analyserFFT)
 
     this.analyserShort = makeAnalyser(ctx, this.shortSize)
-    this.source.connect(this.analyserShort)
+    this.bus.connect(this.analyserShort)
 
     this.frame.sampleRate = ctx.sampleRate
+    this.lastTime = 0
+    return ctx
+  }
+
+  /** Where an internal source, such as the synth, connects itself. */
+  get analysisBus(): AudioNode | null {
+    return this.bus
+  }
+
+  /**
+   * Route a captured stream into the graph. Playback to ctx.destination is
+   * mandatory: tabCapture *redirects* the tab's audio, so without this the tab
+   * goes silent.
+   */
+  async attach(stream: MediaStream) {
+    this.detach()
+    const ctx = await this.ensureContext()
+
+    this.stream = stream
+    this.source = ctx.createMediaStreamSource(stream)
+    this.source.connect(this.bus!)
+
     this.lastTime = 0
     this.detector.reset()
   }
@@ -167,28 +195,15 @@ export class AudioEngine {
       for (const track of this.stream.getTracks()) track.stop()
       this.stream = null
     }
-    for (const node of [
-      this.source,
-      this.splitter,
-      this.analyserL,
-      this.analyserR,
-      this.analyserFFT,
-      this.analyserShort,
-      this.outputGain,
-    ]) {
-      try {
-        node?.disconnect()
-      } catch {
-        // Already disconnected. Nothing to do and nothing worth reporting.
-      }
+    // Only the tab's source is unwired. The bus and the analysers stay, because
+    // the synth may still be playing through them and rebuilding the graph would
+    // cut it off.
+    try {
+      this.source?.disconnect()
+    } catch {
+      // Already disconnected. Nothing to do and nothing worth reporting.
     }
     this.source = null
-    this.splitter = null
-    this.analyserL = null
-    this.analyserR = null
-    this.analyserFFT = null
-    this.analyserShort = null
-    this.outputGain = null
 
     this.levelState = 0
     this.slowLevel = 0
@@ -201,6 +216,28 @@ export class AudioEngine {
   /** Permanently release the AudioContext. Call only when the document unloads. */
   async dispose() {
     this.detach()
+    for (const node of [
+      this.bus,
+      this.splitter,
+      this.analyserL,
+      this.analyserR,
+      this.analyserFFT,
+      this.analyserShort,
+      this.outputGain,
+    ]) {
+      try {
+        node?.disconnect()
+      } catch {
+        // Already disconnected.
+      }
+    }
+    this.bus = null
+    this.splitter = null
+    this.analyserL = null
+    this.analyserR = null
+    this.analyserFFT = null
+    this.analyserShort = null
+    this.outputGain = null
     if (this.ctx) {
       const ctx = this.ctx
       this.ctx = null
