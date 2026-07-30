@@ -112,7 +112,7 @@ export function SynthPanel({
                 ]}
               />
             </Cell>
-            <Cell name="Oct">
+            <Cell name="Octave">
               <Stepper
                 label="Octave"
                 options={[1, 2, 3, 4, 5, 6] as const}
@@ -182,7 +182,7 @@ export function SynthPanel({
 
           <Bank name="Envelope">
             <Knob
-              label="Att"
+              label="Attack"
               value={settings.attack}
               min={0.001}
               max={1.5}
@@ -192,7 +192,7 @@ export function SynthPanel({
               onChange={(attack) => patch({ attack })}
             />
             <Knob
-              label="Dec"
+              label="Decay"
               value={settings.decay}
               min={0.01}
               max={2}
@@ -202,7 +202,7 @@ export function SynthPanel({
               onChange={(decay) => patch({ decay })}
             />
             <Knob
-              label="Sus"
+              label="Sustain"
               value={settings.sustain}
               min={0}
               max={1}
@@ -212,7 +212,7 @@ export function SynthPanel({
               onChange={(sustain) => patch({ sustain })}
             />
             <Knob
-              label="Rel"
+              label="Release"
               value={settings.release}
               min={0.01}
               max={3}
@@ -257,13 +257,13 @@ export function SynthPanel({
                   onChange={(arpRate) => patch({ arpRate })}
                 />
                 <Knob
-                  label="Range"
+                  label="Octaves"
                   value={settings.arpOctaves}
                   min={1}
                   max={3}
                   step={1}
                   reset={1}
-                  format={(v) => `${Math.round(v)}oct`}
+                  format={(v) => `${Math.round(v)}`}
                   onChange={(arpOctaves) => patch({ arpOctaves })}
                 />
                 {/* Latch keeps notes in the pattern after release, so a chord can

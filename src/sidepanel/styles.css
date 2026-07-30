@@ -584,13 +584,14 @@ body {
 /* Knobs pack several to a row, which is the point of using them: a synth has a
    dozen continuous parameters, and a dozen full-width slider rows is a very tall
    panel to scroll past. */
+/* min-width, not width: a knob cell is as wide as its longest line, so SUSTAIN
+   widens its cell rather than colliding with RELEASE next door. */
 .knob {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  width: 40px;
-  min-width: 0;
+  min-width: 40px;
 }
 
 .knob-dial {
