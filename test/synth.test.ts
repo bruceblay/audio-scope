@@ -9,7 +9,7 @@
  * Run: npm run test:synth
  */
 import { DEFAULT_SYNTH, arpSequence, midiToHz, midiToName } from '../src/audio/synth'
-import { KEYS } from '../src/ui/Keyboard'
+import { KEYS, OCTAVE_DOWN, OCTAVE_UP } from '../src/ui/Keyboard'
 
 let failures = 0
 const check = (name: string, ok: boolean, detail: string) => {
@@ -47,33 +47,54 @@ console.log('\n--- TUNING: equal temperament, A440 ---')
 }
 
 // --- Keyboard layout -------------------------------------------------------
-console.log('\n--- KEYBOARD: one octave, correctly shaped ---')
+console.log('\n--- KEYBOARD: two octaves, correctly shaped ---')
 {
-  check('spans C to C', KEYS[0].semitone === 0 && KEYS[KEYS.length - 1].semitone === 12, `${KEYS.length} keys`)
+  const white = KEYS.filter((k) => !k.black)
+  const black = KEYS.filter((k) => k.black)
+
   check(
-    'seven naturals and five sharps',
-    KEYS.filter((k) => !k.black).length === 8 && KEYS.filter((k) => k.black).length === 5,
-    `${KEYS.filter((k) => !k.black).length} white (7 + the octave), 5 black`,
+    'spans two octaves, C to C',
+    KEYS.length === 25 && KEYS[0].semitone === 0 && KEYS[24].semitone === 24,
+    `${KEYS.length} keys, semitone 0 to ${KEYS[KEYS.length - 1].semitone}`,
   )
-  // The black keys have to land on the right semitones or the keyboard is not a
-  // keyboard: 1, 3, 6, 8, 10 within the octave.
   check(
-    'sharps sit on the right semitones',
-    KEYS.filter((k) => k.black)
-      .map((k) => k.semitone)
-      .join(',') === '1,3,6,8,10',
-    KEYS.filter((k) => k.black).map((k) => k.semitone).join(', '),
+    'fifteen naturals and ten sharps',
+    white.length === 15 && black.length === 10,
+    `${white.length} white, ${black.length} black`,
+  )
+  // Black keys must land on 1, 3, 6, 8, 10 within *every* octave, or the
+  // keyboard stops being a keyboard past the first twelve keys.
+  check(
+    'sharps sit on the right semitones in both octaves',
+    black.every((k) => [1, 3, 6, 8, 10].includes(k.semitone % 12)),
+    black.map((k) => k.semitone).join(', '),
   )
   check(
     'every key has a distinct computer key',
     new Set(KEYS.map((k) => k.code)).size === KEYS.length,
     `${KEYS.length} unique codes`,
   )
-  // Z and X shift octaves, so neither may also be a note.
   check(
     'octave shift keys are not notes',
-    !KEYS.some((k) => k.code === 'z' || k.code === 'x'),
-    'z and x are free',
+    !KEYS.some((k) => k.code === OCTAVE_DOWN || k.code === OCTAVE_UP),
+    `"${OCTAVE_DOWN}" and "${OCTAVE_UP}" are free`,
+  )
+
+  // Black key positions are generated from a running white-key count, so an
+  // off-by-one anywhere would put a sharp over the wrong seam. They must climb
+  // monotonically and stay inside the keyboard.
+  const offsets = black.map((k) => k.offset ?? -1)
+  check(
+    'sharps are positioned in order across the whole keyboard',
+    offsets.every((o, i) => o > 0 && o < 100 && (i === 0 || o > offsets[i - 1])),
+    offsets.map((o) => o.toFixed(1)).join(' '),
+  )
+  // A sharp sits on the seam after n white keys, so its position is n/15 of the
+  // width. C#, the first, follows exactly one white key.
+  check(
+    'the first sharp sits one white key in',
+    Math.abs((offsets[0] ?? 0) - 100 / 15) < 0.01,
+    `${offsets[0]?.toFixed(2)}% against ${(100 / 15).toFixed(2)}%`,
   )
 }
 

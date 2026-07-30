@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { midiToName } from '../audio/synth'
 
 /**
- * One-octave chromatic keyboard, following the layout mcp-2000 uses: white keys
+ * Two-octave chromatic keyboard, following the layout mcp-2000 uses: white keys
  * in a row, black keys absolutely positioned over the seams, and the computer
  * key printed on each so it can be played without a mouse.
  */
@@ -12,29 +12,53 @@ interface Key {
   black: boolean
   /** Computer key that plays it. */
   code: string
-  /** Position along the octave, as a percentage, for the black keys. */
+  /** Left edge as a percentage of the keyboard, for the black keys. */
   offset?: number
 }
 
 /**
- * Home row for the naturals, the row above for the sharps - the same shape as
- * every tracker and DAW, so it needs no learning.
+ * The tracker layout, which is also what most DAWs use: the lower octave on the
+ * bottom two rows and the upper octave on the top two, naturals below sharps in
+ * each pair. Two octaves rather than one, because a single octave runs out
+ * immediately and there is width for more.
+ *
+ * Octave shift moves to `-` and `=`. Z and X are the usual keys for it, but here
+ * they are the bottom octave's C and D.
  */
-export const KEYS: Key[] = [
-  { semitone: 0, black: false, code: 'a' },
-  { semitone: 1, black: true, code: 'w', offset: 12.5 },
-  { semitone: 2, black: false, code: 's' },
-  { semitone: 3, black: true, code: 'e', offset: 25 },
-  { semitone: 4, black: false, code: 'd' },
-  { semitone: 5, black: false, code: 'f' },
-  { semitone: 6, black: true, code: 't', offset: 50 },
-  { semitone: 7, black: false, code: 'g' },
-  { semitone: 8, black: true, code: 'y', offset: 62.5 },
-  { semitone: 9, black: false, code: 'h' },
-  { semitone: 10, black: true, code: 'u', offset: 75 },
-  { semitone: 11, black: false, code: 'j' },
-  { semitone: 12, black: false, code: 'k' },
-]
+const LOWER = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm']
+const UPPER = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u']
+export const OCTAVE_DOWN = '-'
+export const OCTAVE_UP = '='
+
+/** Semitones within an octave that are black keys. */
+const BLACK = new Set([1, 3, 6, 8, 10])
+
+/**
+ * Build the key list, positioning black keys as a percentage of the whole
+ * keyboard.
+ *
+ * A black key sits over the seam between two whites, so its position depends on
+ * how many white keys precede it across *all* octaves - which is why this is
+ * generated rather than a table of hard-coded percentages like the one-octave
+ * version had.
+ */
+function buildKeys(): Key[] {
+  const codes = [...LOWER, ...UPPER, 'i']
+  const keys: Key[] = []
+  let whites = 0
+  for (let i = 0; i < codes.length; i++) {
+    const black = BLACK.has(i % 12)
+    keys.push({ semitone: i, black, code: codes[i], offset: black ? whites : undefined })
+    if (!black) whites++
+  }
+  // Second pass: `whites` is now the total, so the boundaries can be scaled.
+  for (const key of keys) {
+    if (key.offset !== undefined) key.offset = (key.offset / whites) * 100
+  }
+  return keys
+}
+
+export const KEYS = buildKeys()
 
 const BY_CODE = new Map(KEYS.map((k) => [k.code, k]))
 
@@ -75,8 +99,8 @@ export function Keyboard({
     const keyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
       const code = e.key.toLowerCase()
-      if (code === 'z' || code === 'x') {
-        shiftRef.current(code === 'z' ? -1 : 1)
+      if (code === OCTAVE_DOWN || code === OCTAVE_UP) {
+        shiftRef.current(code === OCTAVE_UP ? 1 : -1)
         e.preventDefault()
         return
       }
@@ -118,6 +142,9 @@ export function Keyboard({
 
   const whites = KEYS.filter((k) => !k.black)
   const blacks = KEYS.filter((k) => k.black)
+  // Black keys are a fixed fraction of a white key, so their width follows the
+  // white count rather than being a constant percentage.
+  const blackWidth = (100 / whites.length) * 0.62
 
   const press = (e: React.PointerEvent, midi: number) => {
     // Capture, so a drag off the key still delivers its pointerup here and the
@@ -154,7 +181,7 @@ export function Keyboard({
               key={k.semitone}
               type="button"
               className={sounding.has(midi) ? 'key key-black is-on' : 'key key-black'}
-              style={{ left: `${k.offset}%` }}
+              style={{ left: `${k.offset}%`, width: `${blackWidth}%` }}
               aria-label={midiToName(midi)}
               onPointerDown={(e) => press(e, midi)}
               onPointerUp={() => onNoteOff(midi)}

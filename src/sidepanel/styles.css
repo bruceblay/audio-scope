@@ -579,6 +579,82 @@ body {
   border-radius: 3px;
 }
 
+/* --------------------------------------------------------------- knobs -- */
+
+/* Knobs pack several to a row, which is the point of using them: a synth has a
+   dozen continuous parameters, and a dozen full-width slider rows is a very tall
+   panel to scroll past. Auto-fit so they reflow rather than shrink. */
+.knobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  gap: 6px 4px;
+  padding: 6px 0 2px;
+}
+
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.knob-dial {
+  width: 42px;
+  height: 42px;
+  cursor: ns-resize;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.knob-dial:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: -2px;
+  border-radius: 50%;
+}
+
+.knob-track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.knob-fill {
+  fill: none;
+  stroke: var(--live);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.knob-body {
+  fill: var(--raised);
+  stroke: var(--line);
+  stroke-width: 0.6;
+}
+
+.knob-pointer {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.knob-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--legend);
+}
+
+.knob-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  color: var(--text);
+}
+
 /* ------------------------------------------------------------ keyboard -- */
 
 /* Outside the collapsible rail on purpose: the synth exists so you can watch the
@@ -1060,4 +1136,29 @@ body {
 
 :root[data-theme='tek'] .rail-handle:hover {
   background: linear-gradient(#f4f1ea, var(--raised));
+}
+
+:root[data-theme='tek'] .knob-track {
+  stroke: #a7a396;
+}
+
+:root[data-theme='tek'] .knob-fill {
+  stroke: var(--tek-red);
+}
+
+:root[data-theme='tek'] .knob-body {
+  fill: #e8e5dc;
+  stroke: #a7a396;
+}
+
+:root[data-theme='tek'] .knob-pointer {
+  stroke: #24261f;
+}
+
+:root[data-theme='tek'] .key-white {
+  background: linear-gradient(#fbfaf6, #ddd9cf);
+}
+
+:root[data-theme='tek'] .synth-strip {
+  background: linear-gradient(var(--rail), #bcb8ac);
 }

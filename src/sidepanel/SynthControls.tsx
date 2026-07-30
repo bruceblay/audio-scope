@@ -1,7 +1,6 @@
 import type { ArpMode, SynthSettings, Waveform } from '../audio/synth'
-import { Group, Row, Segmented, Slider, Stepper } from '../ui/controls'
-
-const ARP_RATES = [2, 4, 6, 8, 12, 16] as const
+import { Group, Row, Segmented, Stepper } from '../ui/controls'
+import { Knob } from '../ui/Knob'
 
 /**
  * Cutoff is stored in Hz but driven logarithmically. A linear cutoff slider
@@ -14,6 +13,8 @@ const toSlider = (hz: number) => Math.log(hz / HZ_MIN) / Math.log(HZ_MAX / HZ_MI
 const fromSlider = (t: number) => HZ_MIN * Math.pow(HZ_MAX / HZ_MIN, t)
 
 const formatHz = (hz: number) => (hz >= 1000 ? `${(hz / 1000).toFixed(1)}k` : `${Math.round(hz)}`)
+
+const secs = (v: number) => (v < 1 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(2)}s`)
 
 export function SynthPanel({
   settings,
@@ -56,7 +57,7 @@ export function SynthPanel({
                 ]}
               />
             </Row>
-            <Row label={`Octave ${octave}`}>
+            <Row label="Octave">
               <Stepper
                 label="Octave"
                 options={[1, 2, 3, 4, 5, 6] as const}
@@ -65,28 +66,30 @@ export function SynthPanel({
                 onChange={onOctave}
               />
             </Row>
-            {/* Two oscillators a few cents apart. At zero they sum to one
-                waveform, which is the setting to use when measuring. */}
-            <Row label={`Detune ${settings.detune}¢`}>
-              <Slider
+            <div className="knobs">
+              {/* Two oscillators a few cents apart. At zero they sum to one
+                  waveform, which is the setting to measure with. */}
+              <Knob
                 label="Detune"
                 value={settings.detune}
                 min={0}
                 max={40}
                 step={1}
+                reset={12}
+                format={(v) => `${Math.round(v)}\u00a2`}
                 onChange={(detune) => patch({ detune })}
               />
-            </Row>
-            <Row label="Level">
-              <Slider
+              <Knob
                 label="Level"
                 value={settings.level}
                 min={0}
                 max={1}
-                step={0.02}
+                step={0.01}
+                reset={0.5}
+                format={(v) => `${Math.round(v * 100)}%`}
                 onChange={(level) => patch({ level })}
               />
-            </Row>
+            </div>
           </>
         )}
       </Group>
@@ -94,81 +97,85 @@ export function SynthPanel({
       {settings.enabled && (
         <>
           <Group title="Filter">
-            <Row label={`Cutoff ${formatHz(settings.cutoff)}`}>
-              <Slider
+            <div className="knobs">
+              <Knob
                 label="Cutoff"
                 value={toSlider(settings.cutoff)}
                 min={0}
                 max={1}
-                step={0.005}
+                step={0.004}
+                reset={toSlider(2200)}
+                format={(t) => formatHz(fromSlider(t))}
                 onChange={(t) => patch({ cutoff: Math.round(fromSlider(t)) })}
               />
-            </Row>
-            <Row label="Resonance">
-              <Slider
-                label="Resonance"
+              <Knob
+                label="Res"
                 value={settings.resonance}
                 min={0.5}
                 max={20}
                 step={0.5}
+                reset={6}
+                format={(v) => v.toFixed(1)}
                 onChange={(resonance) => patch({ resonance })}
               />
-            </Row>
-            {/* How far the envelope opens the filter above cutoff. This is what
-                gives a note a shape rather than only a volume. */}
-            <Row label="Env amount">
-              <Slider
-                label="Envelope amount"
+              {/* How far the envelope opens the filter above cutoff. This is
+                  what gives a note a shape rather than only a volume. */}
+              <Knob
+                label="Env"
                 value={settings.envAmount}
                 min={0}
                 max={5}
                 step={0.1}
+                reset={1.8}
+                format={(v) => `${v.toFixed(1)}oct`}
                 onChange={(envAmount) => patch({ envAmount })}
               />
-            </Row>
+            </div>
           </Group>
 
           <Group title="Envelope">
-            <Row label="Attack">
-              <Slider
+            <div className="knobs">
+              <Knob
                 label="Attack"
                 value={settings.attack}
                 min={0.001}
                 max={1.5}
-                step={0.005}
+                step={0.002}
+                reset={0.01}
+                format={secs}
                 onChange={(attack) => patch({ attack })}
               />
-            </Row>
-            <Row label="Decay">
-              <Slider
+              <Knob
                 label="Decay"
                 value={settings.decay}
                 min={0.01}
                 max={2}
                 step={0.01}
+                reset={0.18}
+                format={secs}
                 onChange={(decay) => patch({ decay })}
               />
-            </Row>
-            <Row label="Sustain">
-              <Slider
+              <Knob
                 label="Sustain"
                 value={settings.sustain}
                 min={0}
                 max={1}
-                step={0.02}
+                step={0.01}
+                reset={0.55}
+                format={(v) => `${Math.round(v * 100)}%`}
                 onChange={(sustain) => patch({ sustain })}
               />
-            </Row>
-            <Row label="Release">
-              <Slider
+              <Knob
                 label="Release"
                 value={settings.release}
                 min={0.01}
                 max={3}
                 step={0.01}
+                reset={0.25}
+                format={secs}
                 onChange={(release) => patch({ release })}
               />
-            </Row>
+            </div>
           </Group>
 
           <Group title="Arpeggiator">
@@ -185,39 +192,21 @@ export function SynthPanel({
             </Row>
             {settings.arpOn && (
               <>
-                <Row label="Rate">
-                  <Stepper
-                    label="Arpeggiator rate"
-                    options={ARP_RATES}
-                    value={settings.arpRate as (typeof ARP_RATES)[number]}
-                    format={(v) => `${v}/s`}
-                    onChange={(arpRate) => patch({ arpRate })}
-                  />
-                </Row>
                 <Row label="Mode">
                   <Segmented<ArpMode>
                     label="Arpeggiator mode"
                     value={settings.arpMode}
                     onChange={(arpMode) => patch({ arpMode })}
                     options={[
-                      { value: 'up', label: '↑' },
-                      { value: 'down', label: '↓' },
-                      { value: 'updown', label: '↕' },
+                      { value: 'up', label: '\u2191' },
+                      { value: 'down', label: '\u2193' },
+                      { value: 'updown', label: '\u2195' },
                       { value: 'random', label: '?' },
                     ]}
                   />
                 </Row>
-                <Row label="Octaves">
-                  <Stepper
-                    label="Arpeggiator octaves"
-                    options={[1, 2, 3] as const}
-                    value={settings.arpOctaves as 1 | 2 | 3}
-                    format={(v) => `${v}`}
-                    onChange={(arpOctaves) => patch({ arpOctaves })}
-                  />
-                </Row>
-                {/* Latch keeps notes in the pattern after release, so a chord can
-                    be built up one key at a time and then left running. */}
+                {/* Latch keeps notes in the pattern after release, so a chord
+                    can be built up one key at a time and left running. */}
                 <Row label="Latch">
                   <Segmented<'on' | 'off'>
                     label="Latch"
@@ -229,6 +218,28 @@ export function SynthPanel({
                     ]}
                   />
                 </Row>
+                <div className="knobs">
+                  <Knob
+                    label="Rate"
+                    value={settings.arpRate}
+                    min={1}
+                    max={20}
+                    step={1}
+                    reset={8}
+                    format={(v) => `${Math.round(v)}/s`}
+                    onChange={(arpRate) => patch({ arpRate })}
+                  />
+                  <Knob
+                    label="Range"
+                    value={settings.arpOctaves}
+                    min={1}
+                    max={3}
+                    step={1}
+                    reset={1}
+                    format={(v) => `${Math.round(v)}oct`}
+                    onChange={(arpOctaves) => patch({ arpOctaves })}
+                  />
+                </div>
               </>
             )}
           </Group>

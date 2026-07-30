@@ -571,12 +571,6 @@ export function App() {
         ) : (
           <ScopePanel settings={scope} patch={patchScope} />
         )}
-        <SynthPanel
-          settings={synthSettings}
-          patch={patchSynth}
-          octave={octave}
-          onOctave={setOctave}
-        />
         <Group title="Instrument">
           <Row label="Panel">
             <Segmented<ThemeId>
@@ -590,6 +584,14 @@ export function App() {
             />
           </Row>
         </Group>
+        {/* Last in the rail, so it sits directly above its own keyboard rather
+            than with the panel settings wedged between the two. */}
+        <SynthPanel
+          settings={synthSettings}
+          patch={patchSynth}
+          octave={octave}
+          onOctave={setOctave}
+        />
       </div>
 
       {synthSettings.enabled && (
