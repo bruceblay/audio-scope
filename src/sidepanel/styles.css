@@ -635,7 +635,8 @@ body {
   stroke-linecap: round;
 }
 
-.knob-label {
+.knob-label,
+.cell-label {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -677,23 +678,22 @@ body {
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 7px 5px;
-  justify-content: center;
   margin-top: 9px;
 }
 
 /* Recessed rather than raised: the bank is the hole the controls sit in, so the
    knobs and switches on top of it keep the only raised edges in the panel.
 
-   A bank hugs its contents and the line of banks is centred, rather than each
-   bank stretching to fill. Stretching sounds like the way to use the width and is
-   not: a bank alone on its line becomes a wide empty box with its controls in one
-   corner, which is exactly the lopsided space this layout exists to get rid of.
-   Hugging keeps a bank the size of what it holds, and centring splits whatever is
-   left over evenly. */
+   Banks grow to fill their line, and their contents spread with them. Growing
+   alone failed earlier: contents stayed packed in a corner and the grown bank was
+   an empty box. Hugging and centring the banks failed next: the block of banks
+   floated in the panel with dead margins either side. The missing piece was
+   space-evenly on the contents, so a bank that grows distributes the gain to the
+   gaps between its controls instead of piling it at one end. */
 .bank {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 5px 5px 6px;
+  padding: 5px 7px 6px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.18);
   box-shadow:
@@ -711,29 +711,25 @@ body {
   color: var(--faint);
 }
 
-/* Centred, not packed left. A bank grows to fill its line, so left-packing puts
-   all of a bank's slack on its right-hand side - which is the wasted, lopsided
-   space the full-width rows had, one level further in. Centring splits the slack
-   evenly and the cluster stays balanced at any panel width. */
+/* space-evenly, and bottom-aligned. Evenly is what turns a grown bank from an
+   empty box with controls in one corner into a spread panel section. Bottom
+   alignment puts every control's name on the same line, since names sit under
+   their controls and the controls vary in height. */
 .bank-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: space-evenly;
   gap: 6px 3px;
 }
 
-/* Every switch in a bank carries its own caption, so the whole panel reads the
-   same way: the name is always directly above or below what it names. */
-.bank-sub {
+/* A non-knob control with its name below it, where a knob's name is. One rule
+   for both labels, so they cannot drift apart. */
+.cell {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 3px;
-}
-
-.bank-sub .bank-cap {
-  margin-bottom: 0;
 }
 
 /* Switches inside a bank are tighter than the ones in the scope's rows: they sit

@@ -43,15 +43,16 @@ function Bank({ name, children }: { name: string; children: ReactNode }) {
 }
 
 /**
- * A switch with its caption directly above it. Knobs already name themselves
- * under the dial; this gives switches the same treatment so a bank reads as one
- * kind of thing rather than two.
+ * A non-knob control with its name below it, exactly where a knob puts its name.
+ * The first pass captioned switches above and knobs below, which meant the eye
+ * had to change direction for every other control. Hardware silkscreens the name
+ * under everything; so does this.
  */
 function Cell({ name, children }: { name: string; children: ReactNode }) {
   return (
-    <div className="bank-sub">
-      <span className="bank-cap">{name}</span>
+    <div className="cell">
       {children}
+      <span className="cell-label">{name}</span>
     </div>
   )
 }
@@ -132,16 +133,6 @@ export function SynthPanel({
               reset={12}
               format={(v) => `${Math.round(v)}¢`}
               onChange={(detune) => patch({ detune })}
-            />
-            <Knob
-              label="Level"
-              value={settings.level}
-              min={0}
-              max={1}
-              step={0.01}
-              reset={0.5}
-              format={(v) => `${Math.round(v * 100)}%`}
-              onChange={(level) => patch({ level })}
             />
           </Bank>
 
@@ -277,6 +268,21 @@ export function SynthPanel({
                 </Cell>
               </>
             )}
+          </Bank>
+
+          {/* Output volume is not an oscillator parameter; it gets its own
+              section at the end of the chain, where the signal actually is. */}
+          <Bank name="Out">
+            <Knob
+              label="Level"
+              value={settings.level}
+              min={0}
+              max={1}
+              step={0.01}
+              reset={0.5}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(level) => patch({ level })}
+            />
           </Bank>
         </div>
       )}

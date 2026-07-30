@@ -212,16 +212,32 @@ empty space back in a new shape. Knobs are 40 px, which is what gets them side b
 side at the default panel width. Below about 340 px they wrap, which is correct
 and not worth fighting.
 
-Then the opposite mistake: making banks *grow* to fill their line. That sounds
-like the way to use the width and is not. A bank alone on its line - ARP, at any
-reasonable panel width - becomes a wide empty box with its controls bunched in one
-corner, which is the lopsided space this layout exists to remove, one level
-further in. A bank hugs its contents and the line of banks is centred instead, so
-a bank is always the size of the thing it holds and the leftover is split evenly.
-Inside a bank the controls are centred too, for the same reason.
+It took three tries to distribute the remaining width, and each failure was the
+same space in a different place. Banks that *grow* left their contents packed in
+a corner: a grown bank was an empty box. Banks that *hug* their contents, with
+the line of banks centred, floated the whole block in the panel with dead margins
+either side. The resolution is both halves at once: banks grow to fill their
+line, **and their contents spread with `space-evenly`**, so the gained width goes
+into the gaps between controls instead of piling up at one end. Neither half
+works alone.
 
-This only became obvious on a wide panel. The narrow case hid it, because at
-360 px there is no slack for a bank to distribute badly.
+Two more rules that came out of the same review:
+
+- **Every control is named below itself.** Knobs were captioned under the dial
+  and switches above, so the eye changed direction on every other control.
+  Hardware silkscreens the name under everything; one shared CSS rule keeps knob
+  and cell labels identical by construction. Contents bottom-align, which puts
+  all the names on one line.
+- **Group by signal chain, not by convenience.** Level had been dropped into the
+  OSC bank because there was room. It is output volume, not an oscillator
+  parameter, so it gets its own OUT section at the end - which is exactly the
+  Minimoog's panel order: Oscillator Bank, Filter, Envelope (Modifiers), Output.
+  Octave and Detune stay with OSC because they are pitch controls (the Minimoog
+  calls octave "Range" and puts it in the oscillator bank).
+
+Each failure here was invisible at one panel width and obvious at another, so
+layout changes are checked by screenshotting the real stylesheet at 360 and
+830 px, not by reasoning about the flexbox.
 
 The general rule: **a settings screen and an instrument are different objects.**
 Consistency between them is not a virtue worth the space it costs here.
