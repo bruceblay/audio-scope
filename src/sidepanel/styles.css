@@ -583,25 +583,19 @@ body {
 
 /* Knobs pack several to a row, which is the point of using them: a synth has a
    dozen continuous parameters, and a dozen full-width slider rows is a very tall
-   panel to scroll past. Auto-fit so they reflow rather than shrink. */
-.knobs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
-  gap: 6px 4px;
-  padding: 6px 0 2px;
-}
-
+   panel to scroll past. */
 .knob {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
+  width: 40px;
   min-width: 0;
 }
 
 .knob-dial {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   cursor: ns-resize;
   touch-action: none;
   -webkit-user-select: none;
@@ -653,6 +647,101 @@ body {
   font-variant-numeric: tabular-nums;
   font-size: 9px;
   color: var(--text);
+}
+
+/* ---------------------------------------------------------------- synth -- */
+
+/* The synth deliberately does not use the Row/Group layout the rest of the rail
+   uses. A settings list pins a label to the far left and its control to the far
+   right, so a caption ends up an inch away from the thing it names, and a section
+   holding three knobs still takes the full width of the panel. That is fine for
+   eight scope settings and wrong for twenty-five synth parameters.
+
+   Banks instead, the way a front panel is laid out: the caption sits directly on
+   top of what it names, and a bank is only as wide as its contents, so several
+   share a row and the width gets used. */
+.synth-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.synth-head .group-title {
+  margin-bottom: 0;
+}
+
+.banks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 7px 5px;
+  margin-top: 9px;
+}
+
+/* Recessed rather than raised: the bank is the hole the controls sit in, so the
+   knobs and switches on top of it keep the only raised edges in the panel.
+
+   Banks grow to share out whatever is left on their line. Sized purely to their
+   contents they leave a ragged right edge, which is the same wasted width the
+   full-width rows had, only in a different shape. */
+.bank {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 5px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--highlight);
+}
+
+.bank-cap {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.bank-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 3px;
+}
+
+/* Every switch in a bank carries its own caption, so the whole panel reads the
+   same way: the name is always directly above or below what it names. */
+.bank-sub {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.bank-sub .bank-cap {
+  margin-bottom: 0;
+}
+
+/* Switches inside a bank are tighter than the ones in the scope's rows: they sit
+   beside knobs rather than alone at the end of a row, and the row has to fit
+   several of them. */
+.bank .segmented button {
+  padding: 5px 7px;
+  font-size: 10px;
+}
+
+.bank .stepper button {
+  width: 18px;
+}
+
+.bank .stepper-value {
+  min-width: 30px;
+  padding: 5px 4px;
+  font-size: 10.5px;
 }
 
 /* ------------------------------------------------------------ keyboard -- */
@@ -1153,6 +1242,15 @@ body {
 
 :root[data-theme='tek'] .knob-pointer {
   stroke: #24261f;
+}
+
+/* On a light panel a recess is a soft shadow with a light lip below it, not a
+   darker fill: cream panels do not have black holes cut in them. */
+:root[data-theme='tek'] .bank {
+  background: rgba(0, 0, 0, 0.045);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 :root[data-theme='tek'] .key-white {

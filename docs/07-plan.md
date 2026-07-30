@@ -326,6 +326,22 @@ that treats "internal generator" as a source alongside the tab.
 That is the same requirement as Circular Pong below, which needs to synthesize its
 own X-Y signal. Worth building the generator first and letting Pong use it.
 
+**Every parameter is live.** The first version baked the settings into a voice at
+note-on, so a sounding note ignored the filter until the next keypress. That is
+wrong twice over: it is not how an instrument behaves, and it defeats the reason
+the synth is here. You tune a sound by holding a note and listening to it change,
+and you verify a display by holding a note and watching the display change. A voice
+therefore reschedules its envelopes against where it currently is: still climbing
+to the attack peak, or past it and gliding to the cutoff. Past four decay time
+constants the sweep has finished and the glide switches to a fast constant, so a
+knob turn on a settled note is heard at once rather than crawling for seconds.
+
+The related bug is worth remembering: the arpeggiator restarted its interval timer
+on *every* settings update. A knob drag patches settings dozens of times a second
+against a 125 ms step, so the timer was cleared before it could ever fire and the
+arpeggiator went silent for as long as the knob was moving. It now restarts only
+when the rate itself changes.
+
 ### Tektronix light mode
 
 A design pass giving the chrome a second, light theme modeled on a Tektronix 2236.

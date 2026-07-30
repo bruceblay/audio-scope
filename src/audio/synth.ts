@@ -82,6 +82,9 @@ class Voice {
   private readonly filter: BiquadFilterNode
   private readonly amp: GainNode
   private stopped = false
+  /** When the note began, so a live edit knows which envelope stage it is in. */
+  private readonly startAt: number
+  private s: SynthSettings
 
   constructor(
     private readonly ctx: AudioContext,
@@ -91,6 +94,8 @@ class Voice {
   ) {
     const now = ctx.currentTime
     const hz = midiToHz(midi + s.octave * 12)
+    this.startAt = now
+    this.s = s
 
     this.filter = ctx.createBiquadFilter()
     this.filter.type = 'lowpass'
@@ -120,20 +125,100 @@ class Voice {
     // Filter envelope: opens `envAmount` octaves above the cutoff on attack and
     // falls back to it. This is what makes a note have a shape rather than just
     // a volume.
-    const open = clamp(s.cutoff * Math.pow(2, s.envAmount), 20, 20000)
     this.filter.frequency.setValueAtTime(s.cutoff, now)
-    this.filter.frequency.linearRampToValueAtTime(open, now + Math.max(0.002, s.attack))
-    this.filter.frequency.setTargetAtTime(s.cutoff, now + s.attack, Math.max(0.01, s.decay))
+    this.scheduleFilter(now)
 
     // Amp envelope. Ramps rather than steps: a step on a gain node is a click.
-    const peak = clamp(s.level, 0, 1)
     this.amp.gain.setValueAtTime(0, now)
-    this.amp.gain.linearRampToValueAtTime(peak, now + Math.max(0.002, s.attack))
-    this.amp.gain.setTargetAtTime(
-      peak * clamp(s.sustain, 0, 1),
-      now + s.attack,
-      Math.max(0.01, s.decay) / 3,
-    )
+    this.scheduleAmp(now)
+  }
+
+  /**
+   * Apply a settings change to a note that is already sounding.
+   *
+   * On a real synth every knob is live: you hold a chord and open the filter and
+   * hear it open. Baking the settings into the voice at note-on and leaving them
+   * meant every parameter was deaf until the next keypress, which is the opposite
+   * of what the synth is here for - you tune a sound by listening to it change.
+   */
+  applySettings(next: SynthSettings) {
+    if (this.stopped) return
+    const now = this.ctx.currentTime
+    const prev = this.s
+    this.s = next
+
+    if (next.waveform !== prev.waveform) {
+      this.oscA.type = next.waveform
+      this.oscB.type = next.waveform
+    }
+    if (next.detune !== prev.detune) {
+      // Short glide rather than a step: a jump in detune is an audible click on
+      // the oscillator phase.
+      this.oscA.detune.setTargetAtTime(-next.detune / 2, now, 0.01)
+      this.oscB.detune.setTargetAtTime(next.detune / 2, now, 0.01)
+    }
+    if (next.octave !== prev.octave) {
+      const hz = midiToHz(this.midi + next.octave * 12)
+      this.oscA.frequency.setTargetAtTime(hz, now, 0.01)
+      this.oscB.frequency.setTargetAtTime(hz, now, 0.01)
+    }
+    if (next.resonance !== prev.resonance) this.filter.Q.setTargetAtTime(next.resonance, now, 0.01)
+
+    if (next.cutoff !== prev.cutoff || next.envAmount !== prev.envAmount || next.decay !== prev.decay)
+      this.scheduleFilter(now)
+    if (next.level !== prev.level || next.sustain !== prev.sustain || next.decay !== prev.decay)
+      this.scheduleAmp(now)
+  }
+
+  /**
+   * (Re)schedule the filter envelope from `now`.
+   *
+   * Where the note is in its envelope decides the shape. Before the attack peak
+   * the ramp continues to the (possibly new) open frequency; after it, the note
+   * glides to the cutoff. The glide uses the decay constant while the decay is
+   * still running, so turning cutoff mid-note bends the sweep rather than cutting
+   * it off, and a fast constant once the decay has settled, so a knob turn on a
+   * held note is heard immediately instead of crawling for seconds.
+   */
+  private scheduleFilter(now: number) {
+    const s = this.s
+    const attackEnd = this.startAt + Math.max(0.002, s.attack)
+    const decay = Math.max(0.01, s.decay)
+    const open = clamp(s.cutoff * Math.pow(2, s.envAmount), 20, 20000)
+    const freq = this.filter.frequency
+
+    freq.cancelScheduledValues(now)
+    freq.setValueAtTime(freq.value, now)
+    if (now < attackEnd) {
+      freq.linearRampToValueAtTime(open, attackEnd)
+      freq.setTargetAtTime(s.cutoff, attackEnd, decay)
+    } else {
+      // Four time constants is within 2% of the target, so past that the decay
+      // has effectively finished and there is no sweep left to preserve.
+      freq.setTargetAtTime(s.cutoff, now, now > attackEnd + 4 * decay ? 0.04 : decay)
+    }
+  }
+
+  /** The same, for the amp envelope. */
+  private scheduleAmp(now: number) {
+    const s = this.s
+    const attackEnd = this.startAt + Math.max(0.002, s.attack)
+    const decay = Math.max(0.01, s.decay) / 3
+    const peak = clamp(s.level, 0, 1)
+    const gain = this.amp.gain
+
+    gain.cancelScheduledValues(now)
+    gain.setValueAtTime(gain.value, now)
+    if (now < attackEnd) {
+      gain.linearRampToValueAtTime(peak, attackEnd)
+      gain.setTargetAtTime(peak * clamp(s.sustain, 0, 1), attackEnd, decay)
+    } else {
+      gain.setTargetAtTime(
+        peak * clamp(s.sustain, 0, 1),
+        now,
+        now > attackEnd + 4 * decay ? 0.03 : decay,
+      )
+    }
   }
 
   release(seconds: number) {
@@ -211,21 +296,29 @@ export class Synth {
   }
 
   update(next: SynthSettings) {
-    const wasArp = this.settings.arpOn
+    const prev = this.settings
     this.settings = next
     if (!next.enabled) {
       this.allNotesOff()
       return
     }
-    if (next.arpOn !== wasArp) {
+    if (next.arpOn !== prev.arpOn) {
       // Switching modes strands whichever set of voices the other mode owns.
       this.stopSustained()
       this.stopArp()
       if (next.arpOn && this.sounding.size) this.startArp()
-    } else if (next.arpOn) {
+    } else if (next.arpOn && next.arpRate !== prev.arpRate) {
+      // Only when the rate actually changed. Restarting the clock on every
+      // update meant a knob drag - which patches settings dozens of times a
+      // second - cleared the interval before it could ever fire, and the
+      // arpeggiator fell silent for as long as the knob was moving.
       this.restartArpClock()
     }
     if (!next.arpLatch) this.latched.clear()
+
+    // Everything else is live on whatever is currently sounding.
+    for (const voice of this.voices.values()) voice.applySettings(next)
+    this.arpVoice?.applySettings(next)
   }
 
   noteOn(midi: number) {

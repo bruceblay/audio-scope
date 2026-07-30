@@ -186,6 +186,36 @@ widens - it always takes whatever is left after the fixed rows. Collapsing the
 control rail gives the canvas nearly the whole panel, which is the intended way to
 use it.
 
+### Two layouts, not one
+
+The rail has two layout systems on purpose, and mixing them was a mistake worth
+recording.
+
+Scope and analyzer settings use **rows**: one control per full-width row, its name
+pinned left and the control pinned right. That works because there are eight of
+them, they are unrelated to each other, and the eye scans a column of names.
+
+The synth uses **banks**: a caption sitting directly on top of a cluster of
+controls, each bank only as wide as it needs, several sharing a row. The synth was
+first built with rows, and it looked bad for reasons that are specific and
+avoidable:
+
+- A full-width row puts a caption at the far left and its own control at the far
+  right, with an inch of nothing between them. At eight rows that reads as a
+  settings list. At twenty-five parameters it reads as a mistake.
+- A section holding three knobs still took the entire panel width, so every
+  section was mostly empty, and there were five of them stacked.
+
+Banks fix both, but only if they actually share rows. The first attempt sized each
+bank to its contents and let them wrap, which put FILTER and ENVELOPE on separate
+lines by four pixels and left the same ragged empty space in a new shape. Knobs are
+40 px and banks grow to fill their line, which is what gets FILTER and ENVELOPE
+side by side at the default panel width. Below about 340 px they wrap, which is
+the correct behaviour and not worth fighting.
+
+The general rule: **a settings screen and an instrument are different objects.**
+Consistency between them is not a virtue worth the space it costs here.
+
 ## Pop-out window
 
 Phase 4. The best version of this is a borderless window with nothing but the
