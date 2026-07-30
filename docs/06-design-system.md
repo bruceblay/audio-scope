@@ -206,12 +206,22 @@ avoidable:
 - A section holding three knobs still took the entire panel width, so every
   section was mostly empty, and there were five of them stacked.
 
-Banks fix both, but only if they actually share rows. The first attempt sized each
-bank to its contents and let them wrap, which put FILTER and ENVELOPE on separate
-lines by four pixels and left the same ragged empty space in a new shape. Knobs are
-40 px and banks grow to fill their line, which is what gets FILTER and ENVELOPE
-side by side at the default panel width. Below about 340 px they wrap, which is
-the correct behaviour and not worth fighting.
+Banks fix both, but only if they actually share rows. The first attempt left
+FILTER and ENVELOPE on separate lines by four pixels, which put the same ragged
+empty space back in a new shape. Knobs are 40 px, which is what gets them side by
+side at the default panel width. Below about 340 px they wrap, which is correct
+and not worth fighting.
+
+Then the opposite mistake: making banks *grow* to fill their line. That sounds
+like the way to use the width and is not. A bank alone on its line - ARP, at any
+reasonable panel width - becomes a wide empty box with its controls bunched in one
+corner, which is the lopsided space this layout exists to remove, one level
+further in. A bank hugs its contents and the line of banks is centred instead, so
+a bank is always the size of the thing it holds and the leftover is split evenly.
+Inside a bank the controls are centred too, for the same reason.
+
+This only became obvious on a wide panel. The narrow case hid it, because at
+360 px there is no slack for a bank to distribute badly.
 
 The general rule: **a settings screen and an instrument are different objects.**
 Consistency between them is not a virtue worth the space it costs here.

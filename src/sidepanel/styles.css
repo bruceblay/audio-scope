@@ -663,7 +663,6 @@ body {
 .synth-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
 }
 
@@ -676,17 +675,21 @@ body {
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 7px 5px;
+  justify-content: center;
   margin-top: 9px;
 }
 
 /* Recessed rather than raised: the bank is the hole the controls sit in, so the
    knobs and switches on top of it keep the only raised edges in the panel.
 
-   Banks grow to share out whatever is left on their line. Sized purely to their
-   contents they leave a ragged right edge, which is the same wasted width the
-   full-width rows had, only in a different shape. */
+   A bank hugs its contents and the line of banks is centred, rather than each
+   bank stretching to fill. Stretching sounds like the way to use the width and is
+   not: a bank alone on its line becomes a wide empty box with its controls in one
+   corner, which is exactly the lopsided space this layout exists to get rid of.
+   Hugging keeps a bank the size of what it holds, and centring splits whatever is
+   left over evenly. */
 .bank {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   padding: 5px 5px 6px;
   border-radius: 4px;
@@ -706,10 +709,15 @@ body {
   color: var(--faint);
 }
 
+/* Centred, not packed left. A bank grows to fill its line, so left-packing puts
+   all of a bank's slack on its right-hand side - which is the wasted, lopsided
+   space the full-width rows had, one level further in. Centring splits the slack
+   evenly and the cluster stays balanced at any panel width. */
 .bank-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px 3px;
 }
 
