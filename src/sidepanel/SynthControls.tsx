@@ -53,6 +53,12 @@ function Cell({ name, children }: { name: string; children: ReactNode }) {
     <div className="cell">
       {children}
       <span className="cell-label">{name}</span>
+      {/* A blank value line. Knobs are three lines tall - dial, name, value -
+          and cells were two, so bottom-aligning rows put cell names on the
+          knobs' value line, one row too low. The blank line makes both controls
+          the same shape, which pins every name to the same row by construction
+          rather than by arithmetic that breaks when a control's height changes. */}
+      <span className="knob-value">{'\u00A0'}</span>
     </div>
   )
 }

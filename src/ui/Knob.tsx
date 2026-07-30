@@ -68,6 +68,15 @@ export function Knob({
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return
+    // A drag only exists while the button is held. If the pointerup was missed -
+    // released outside the panel, capture lost, focus stolen mid-drag - the drag
+    // state would linger and every later hover would keep turning the knob, with
+    // nothing held down. Buttons tells the truth on every move event, so a move
+    // without a held button ends the drag no matter how the release was lost.
+    if (e.buttons === 0) {
+      drag.current = null
+      return
+    }
     // Shift is fine adjust, which matters most on cutoff and the envelope times
     // where the useful range is a small part of the sweep.
     const travel = e.shiftKey ? TRAVEL * 5 : TRAVEL
@@ -115,6 +124,7 @@ export function Knob({
         onPointerMove={onPointerMove}
         onPointerUp={end}
         onPointerCancel={end}
+        onLostPointerCapture={end}
         onKeyDown={onKeyDown}
         onDoubleClick={() => reset !== undefined && onChange(reset)}
         onWheel={(e) => onChange(snap(value + (e.deltaY < 0 ? step : -step)))}
