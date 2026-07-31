@@ -47,6 +47,8 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   /** Phosphor image. Never cleared, only decayed - this is the persistence. */
   private persist: HTMLCanvasElement | null = null
   private persistCtx: CanvasRenderingContext2D | null = null
+  private blurTmp: HTMLCanvasElement | null = null
+  private blurTmpCtx: CanvasRenderingContext2D | null = null
 
   /** Graticule is static, so it is drawn once and blitted. */
   private grat: HTMLCanvasElement | null = null
@@ -120,8 +122,28 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     this.persist.height = height
     this.persistCtx = this.persist.getContext('2d')
 
+    this.blurTmp = document.createElement('canvas')
+    this.blurTmp.width = width
+    this.blurTmp.height = height
+    this.blurTmpCtx = this.blurTmp.getContext('2d')
+
     this.grat = null
     this.gratKey = ''
+  }
+
+  /** One diffusion step: persist -> tmp, then tmp -> persist through a blur. */
+  private diffuse(amount: number) {
+    const persist = this.persist
+    const pctx = this.persistCtx
+    const tctx = this.blurTmpCtx
+    if (!persist || !pctx || !tctx || !this.blurTmp) return
+    tctx.globalCompositeOperation = 'copy'
+    tctx.drawImage(persist, 0, 0)
+    pctx.save()
+    pctx.globalCompositeOperation = 'copy'
+    pctx.filter = `blur(${(clamp(amount, 0, 1) * 1.6 * this.dpr).toFixed(2)}px)`
+    pctx.drawImage(this.blurTmp, 0, 0)
+    pctx.restore()
   }
 
   render(frame: AudioFrame, s: ScopeSettings, theme: ThemeId) {
@@ -143,6 +165,17 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       p.fillStyle = `rgba(0,0,0,${clamp(decay, 0, 1)})`
       p.fillRect(0, 0, this.w, this.h)
     }
+
+    // --- Halation ---------------------------------------------------------
+    // The persistence image diffuses a little every frame, so the stack of
+    // nearly-identical passes that persistence holds fuses into one averaged
+    // ribbon instead of reading as distinct hairlines - the "scribble". This
+    // is where the scribble actually lives: BETWEEN passes, which no amount of
+    // per-pass filtering (smoothing, BW limit) can reach. Optically this is
+    // what a CRT's spot size and halation do to superimposed traces. Blur
+    // compounds across frames as sqrt(n), so the newest trace stays sharp
+    // while history melts; the radius is small on purpose.
+    if (s.halation > 0) this.diffuse(s.halation)
 
     // --- Build the beam ---------------------------------------------------
     if (s.channel === 'xy') this.buildXY(frame, s)
@@ -176,6 +209,8 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   dispose() {
     this.persist = null
     this.persistCtx = null
+    this.blurTmp = null
+    this.blurTmpCtx = null
     this.grat = null
   }
 

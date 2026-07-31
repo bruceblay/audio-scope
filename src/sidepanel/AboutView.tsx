@@ -75,9 +75,14 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             tighter and more immediate; persistence supplies the tail.
           </li>
           <li>
-            <strong>BW limit</strong> is the bench scope's cleanup button: a lowpass on the
-            vertical channel, in hertz. If the trace looks scribbly on compressed sources,
-            step it down; it also steadies the trigger.
+            <strong>BW limit</strong> is the bench scope's noise button: a lowpass on the
+            vertical channel, in hertz. It removes fuzz within the trace and steadies the
+            trigger.
+          </li>
+          <li>
+            <strong>Halation</strong> fuses the overlapping passes the phosphor holds, the way
+            a real tube's glow does. If the trace looks scribbled over itself, raise it; at
+            zero every pass stays razor sharp.
           </li>
           <li>
             <strong>Persistence</strong> is phosphor afterglow. <strong>Focus</strong> is

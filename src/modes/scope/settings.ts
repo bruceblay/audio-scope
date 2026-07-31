@@ -83,6 +83,17 @@ export interface ScopeSettings {
   phosphor: PhosphorId
   /** Phosphor decay time constant in seconds. */
   persistence: number
+  /**
+   * How much the persistence image diffuses per frame, 0..1.
+   *
+   * This is the anti-scribble control, and it works where smoothing and the BW
+   * limit cannot: the scribble is many nearly-identical passes stacked by
+   * persistence, each drawn forever-crisp, so filtering within one pass leaves
+   * the pass-to-pass variation untouched. Diffusing the accumulated image
+   * fuses those passes into one averaged ribbon - which is what a real CRT
+   * does optically, via spot size and halation.
+   */
+  halation: number
   /** Beam energy multiplier. */
   intensity: number
   graticuleBrightness: number
@@ -113,6 +124,7 @@ export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
   beamFocus: 0.55,
 
   phosphor: 'p31',
+  halation: 0.25,
   persistence: 0.25,
   intensity: 0.85,
   graticuleBrightness: 1,

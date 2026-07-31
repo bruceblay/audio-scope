@@ -254,6 +254,19 @@ export function ScopePanel({
             onChange={(beamFocus) => patch({ beamFocus })}
           />
         </Row>
+        {/* Fuses the slightly-different passes persistence stacks up, which is
+            what the scribble is. Smoothing and BW limit act within one pass
+            and cannot reach it. */}
+        <Row label="Halation">
+          <Slider
+            label="Halation"
+            value={settings.halation}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(halation) => patch({ halation })}
+          />
+        </Row>
         <Row label="Intensity">
           <Slider
             label="Intensity"

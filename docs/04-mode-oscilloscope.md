@@ -210,6 +210,35 @@ rather than excused.
 Default is Full: the scribble on real material is part of the instrument's
 character, and cleaning it up is a choice, not a correction.
 
+In review, BW limit turned out to address only half the scribble, and the
+smaller half. See the next section.
+
+### Halation: where the scribble actually lives
+
+BW limit and smoothing both operate *within one pass* of the beam. Shipping BW
+limit and watching it fail to fix the scribble forced the better diagnosis,
+which the user supplied: the trace "looks like the line is traced over in the
+same path several times with slight variations." That is literally the
+mechanism. Persistence holds roughly a dozen frames of trace, each frame draws
+a slightly different rendition of the figure (phase drift, vibrato, codec
+jitter), and every historical pass stays forever-crisp inside the persistence
+buffer. A stack of nearly-identical crisp hairlines *is* the scribble, and no
+per-pass filter can touch pass-to-pass variation.
+
+A real CRT does not have this problem, because the beam spot and phosphor
+halation are optical lowpasses over the *accumulated image*: superimposed
+passes fuse into one bright ribbon. The renderer now models that with the
+**Halation** control (Display section): each frame the persistence buffer is
+diffused by a sub-pixel blur (up to 1.6 px per frame at the slider's top).
+Blur compounds across frames as sqrt(n), so the newest trace stays sharp while
+history melts together into an averaged band. Verified by A/B render of a
+deliberately drifting 3:2 Lissajous with vibrato and noise through the real
+renderer: at 0 the figure is a bundle of hairlines, at 0.5 each path is a
+single soft ribbon, at 1.0 it is fully fused.
+
+Default is 0.25: a gentle fuse that keeps the character. Zero restores the
+forever-crisp stacking exactly.
+
 ## CRT rendering
 
 The look is not a filter over a line chart. It is a model of what an analog scope
