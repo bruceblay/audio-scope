@@ -524,6 +524,20 @@ export function App() {
     [persistPresets, userPresets, activePresetId, presetSnapshot],
   )
 
+  const exportSetup = useCallback(() => {
+    const json = JSON.stringify(
+      {
+        mode: mode === 'analyzer' ? 'analyzer' : 'scope',
+        scope,
+        analyzer,
+        userPresets,
+      },
+      null,
+      2,
+    )
+    return navigator.clipboard.writeText(json)
+  }, [mode, scope, analyzer, userPresets])
+
   // --- Settings persistence ----------------------------------------------
   useEffect(() => {
     chrome.storage.sync.get(STORE_KEY).then((stored) => {
@@ -669,6 +683,7 @@ export function App() {
           onUpdate={updateActivePreset}
           onRename={renamePreset}
           onDelete={deletePreset}
+          onExport={exportSetup}
           onClose={() => setShowPresets(false)}
         />
       )}

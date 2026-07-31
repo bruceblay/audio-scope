@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { isFactoryPreset, type Preset } from './presets'
 
+/** Everything the panel is doing, as clipboard JSON, for tuning by hand. */
+export interface ExportedSetup {
+  mode: string
+  scope: unknown
+  analyzer: unknown
+  userPresets: Preset[]
+}
+
 /**
  * The preset popover, following browser-fx's menu: saving never overwrites,
  * Update is the only path that replaces a preset and only exists for a user
@@ -21,6 +29,7 @@ export function PresetMenu({
   onUpdate,
   onRename,
   onDelete,
+  onExport,
   onClose,
 }: {
   userPresets: Preset[]
@@ -33,11 +42,14 @@ export function PresetMenu({
   onUpdate: () => void
   onRename: (id: string, name: string) => void
   onDelete: (id: string) => void
+  /** Returns the JSON that was copied, so the row can confirm. */
+  onExport: () => Promise<void>
   onClose: () => void
 }) {
   const [editing, setEditing] = useState<Editing | null>(null)
   const [draft, setDraft] = useState('')
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   // Enter commits and then blurs, Escape cancels and then blurs. Without this
   // latch the trailing blur would save a second copy.
@@ -183,6 +195,27 @@ export function PresetMenu({
             <span className="preset-glyph">+</span>save as new
           </div>
         )}
+
+        {/* The tuning loop: dial a look in by eye, copy it out as JSON, and
+            the values go back into a factory preset verbatim - no guessing at
+            aesthetics in code. Includes the user presets, so saved candidates
+            travel too. */}
+        <div
+          className="preset-row preset-action-row"
+          role="button"
+          tabIndex={0}
+          title="Copy current settings and all user presets as JSON"
+          onClick={() => {
+            onExport().then(() => {
+              setCopied(true)
+              window.setTimeout(() => setCopied(false), 1200)
+            })
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && onExport()}
+        >
+          <span className="preset-glyph">{copied ? '✓' : '⎘'}</span>
+          {copied ? 'copied to clipboard' : 'copy setup as JSON'}
+        </div>
 
         {activeIsUser && dirty && (
           <div
