@@ -236,8 +236,8 @@ deliberately drifting 3:2 Lissajous with vibrato and noise through the real
 renderer: at 0 the figure is a bundle of hairlines, at 0.5 each path is a
 single soft ribbon, at 1.0 it is fully fused.
 
-Default is 0.25: a gentle fuse that keeps the character. Zero restores the
-forever-crisp stacking exactly.
+Default is 0.8: the fused ribbon is the intended look (chosen by eye on real
+material). Zero restores the forever-crisp stacking exactly.
 
 ## CRT rendering
 

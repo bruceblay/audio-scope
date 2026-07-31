@@ -124,7 +124,9 @@ export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
   beamFocus: 0.55,
 
   phosphor: 'p31',
-  halation: 0.25,
+  // 0.8 by default: the fused analog ribbon is the intended look, and the
+  // slider still reaches razor-sharp stacking at zero.
+  halation: 0.8,
   persistence: 0.25,
   intensity: 0.85,
   graticuleBrightness: 1,
