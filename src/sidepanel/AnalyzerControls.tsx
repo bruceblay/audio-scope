@@ -110,49 +110,6 @@ export function AnalyzerPanel({
         )}
       </Group>
 
-      <Group title="Range">
-        <Row label="Floor">
-          <Slider
-            label="Floor dB"
-            value={settings.floorDb}
-            min={-120}
-            max={-40}
-            step={6}
-            onChange={(floorDb) => patch({ floorDb })}
-          />
-        </Row>
-        <Row label="Ceiling">
-          <Slider
-            label="Ceiling dB"
-            value={settings.ceilDb}
-            min={-36}
-            max={0}
-            step={6}
-            onChange={(ceilDb) => patch({ ceilDb })}
-          />
-        </Row>
-        <Row label="Low Hz">
-          <Stepper
-            label="Lowest frequency"
-            options={MIN_HZ_OPTIONS}
-            value={settings.minHz as (typeof MIN_HZ_OPTIONS)[number]}
-            format={(v) => `${v} Hz`}
-            onChange={(minHz) => patch({ minHz })}
-          />
-        </Row>
-        {/* Capped below Nyquist at render time, so a 24 kHz setting simply shows
-            everything the sample rate has. */}
-        <Row label="High Hz">
-          <Stepper
-            label="Highest frequency"
-            options={MAX_HZ_OPTIONS}
-            value={settings.maxHz as (typeof MAX_HZ_OPTIONS)[number]}
-            format={(v) => `${v / 1000} kHz`}
-            onChange={(maxHz) => patch({ maxHz })}
-          />
-        </Row>
-      </Group>
-
       <Group title="Display">
         {isSpectrogram ? (
           <Row label="Colour">
@@ -229,6 +186,49 @@ export function AnalyzerPanel({
             )}
           </>
         )}
+      </Group>
+
+      <Group title="Range">
+        <Row label="Floor">
+          <Slider
+            label="Floor dB"
+            value={settings.floorDb}
+            min={-120}
+            max={-40}
+            step={6}
+            onChange={(floorDb) => patch({ floorDb })}
+          />
+        </Row>
+        <Row label="Ceiling">
+          <Slider
+            label="Ceiling dB"
+            value={settings.ceilDb}
+            min={-36}
+            max={0}
+            step={6}
+            onChange={(ceilDb) => patch({ ceilDb })}
+          />
+        </Row>
+        <Row label="Low Hz">
+          <Stepper
+            label="Lowest frequency"
+            options={MIN_HZ_OPTIONS}
+            value={settings.minHz as (typeof MIN_HZ_OPTIONS)[number]}
+            format={(v) => `${v} Hz`}
+            onChange={(minHz) => patch({ minHz })}
+          />
+        </Row>
+        {/* Capped below Nyquist at render time, so a 24 kHz setting simply shows
+            everything the sample rate has. */}
+        <Row label="High Hz">
+          <Stepper
+            label="Highest frequency"
+            options={MAX_HZ_OPTIONS}
+            value={settings.maxHz as (typeof MAX_HZ_OPTIONS)[number]}
+            format={(v) => `${v / 1000} kHz`}
+            onChange={(maxHz) => patch({ maxHz })}
+          />
+        </Row>
       </Group>
     </>
   )
