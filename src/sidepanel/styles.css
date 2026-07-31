@@ -854,13 +854,28 @@ body {
 }
 
 /* Lit from the Synth's own note set, so latched and arpeggiated notes light up
-   as well as held ones. */
-.key.is-on {
-  background: linear-gradient(#7dffab, #2bd964);
+   as well as held ones.
+
+   A sounding key reads as *pressed*, not as a green lamp: slightly darker, the
+   top highlight gone, plus a thin lit strip along the bottom edge - the same
+   underline the segmented switches use for their active state. The earlier
+   version flooded the whole key green with a 10px outer glow, and the glow
+   bled out from behind the keys onto the strip. Keys are physical; the accent
+   is an indicator, not a paint job. */
+.key-white.is-on {
+  background: linear-gradient(#d9d6cc, #c2bfb4);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 0 10px rgba(61, 220, 132, 0.55);
-  color: #0d3a1e;
+    inset 0 2px 3px rgba(0, 0, 0, 0.28),
+    inset 0 -2px 0 var(--live);
+  color: #6b685f;
+}
+
+.key-black.is-on {
+  background: linear-gradient(#22262a, #101214);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 0 var(--live);
+  color: #8b939d;
 }
 
 .key-code {
@@ -1286,6 +1301,19 @@ body {
 
 :root[data-theme='tek'] .key-white {
   background: linear-gradient(#fbfaf6, #ddd9cf);
+}
+
+:root[data-theme='tek'] .key-white.is-on {
+  background: linear-gradient(#e3dfd4, #cbc6b9);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -2px 0 var(--tek-red);
+}
+
+:root[data-theme='tek'] .key-black.is-on {
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 0 var(--tek-red);
 }
 
 :root[data-theme='tek'] .synth-strip {
