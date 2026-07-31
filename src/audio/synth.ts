@@ -49,7 +49,9 @@ export interface SynthSettings {
 
 export const DEFAULT_SYNTH: SynthSettings = {
   enabled: false,
-  waveform: 'sawtooth',
+  // Sine, because the synth is test equipment first: a sine is the signal with
+  // the known answer - one spectral line, a perfect X-Y circle at 1:1.
+  waveform: 'sine',
   octave: 0,
   detune: 12,
   cutoff: 2200,

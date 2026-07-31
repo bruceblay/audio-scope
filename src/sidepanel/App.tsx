@@ -356,6 +356,20 @@ export function App() {
 
   useEffect(() => () => synth.dispose(), [synth])
 
+  // Turning the synth on reveals its controls. The synth section is at the
+  // bottom of the rail and the keyboard strip appears below it in the same
+  // commit, so without this the new controls sit just out of view and the panel
+  // looks like an on/off switch with nothing behind it. Only on the rising
+  // edge: enabled is never restored from storage, so a mount cannot trigger it.
+  const synthSection = useRef<HTMLElement | null>(null)
+  const synthWasEnabled = useRef(false)
+  useEffect(() => {
+    if (synthSettings.enabled && !synthWasEnabled.current) {
+      synthSection.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+    synthWasEnabled.current = synthSettings.enabled
+  }, [synthSettings.enabled])
+
   // The analyzer's window size is an engine concern: it resizes a dedicated
   // AnalyserNode rather than the one pitch detection depends on.
   useEffect(() => {
@@ -591,6 +605,7 @@ export function App() {
           patch={patchSynth}
           octave={octave}
           onOctave={setOctave}
+          sectionRef={synthSection}
         />
       </div>
 

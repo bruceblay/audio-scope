@@ -54,16 +54,16 @@ export function AboutView({ onClose }: { onClose: () => void }) {
 
         <h4>oscilloscope</h4>
         <p>
-          <strong>X-Y</strong> plots left against right and is the default. It is a
-          goniometer: mono content collapses onto the rising diagonal, out-of-phase content
-          swings to the falling one, and wide stereo opens into a shape. Oscilloscope music
-          is composed for this display and draws pictures in it.
+          <strong>L+R</strong>, <strong>L</strong> and <strong>R</strong> give the ordinary
+          sweep, voltage against time, and L+R is the default. The <strong>trigger</strong> is
+          what holds a repeating waveform still instead of letting it slide. Leave it on Auto
+          and it finds the level itself.
         </p>
         <p>
-          <strong>L+R</strong>, <strong>L</strong> and <strong>R</strong> give the ordinary
-          sweep: voltage against time. The <strong>trigger</strong> is what holds a repeating
-          waveform still instead of letting it slide — leave it on Auto and it finds the
-          level itself.
+          <strong>X-Y</strong> plots left against right. It is a goniometer: mono content
+          collapses onto the rising diagonal, out-of-phase content swings to the falling one,
+          and wide stereo opens into a shape. Oscilloscope music is composed for this display
+          and draws pictures in it.
         </p>
         <ul>
           <li>

@@ -87,10 +87,11 @@ export interface ScopeSettings {
 }
 
 export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
-  // X-Y is the default: on music it is the more interesting display of the two,
-  // it needs no time base or trigger to look right, and the stereo field is
-  // something you cannot see any other way.
-  channel: 'xy',
+  // L+R: the ordinary triggered trace is the display everyone recognises as an
+  // oscilloscope, so it is what a new user should meet first. X-Y is one click
+  // away and arguably the more interesting mode on music, but it reads as
+  // abstract art until you know what you are looking at.
+  channel: 'sum',
   timePerDiv: 1e-3,
   voltsPerDiv: 0.1,
   positionY: 0,

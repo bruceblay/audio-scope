@@ -90,14 +90,17 @@ export function SynthPanel({
   patch,
   octave,
   onOctave,
+  sectionRef,
 }: {
   settings: SynthSettings
   patch: (next: Partial<SynthSettings>) => void
   octave: number
   onOctave: (v: number) => void
+  /** So the app can scroll the section into view when the synth turns on. */
+  sectionRef?: React.Ref<HTMLElement>
 }) {
   return (
-    <section className="group synth">
+    <section className="group synth" ref={sectionRef}>
       <div className="synth-head">
         <span className="legend group-title">Synth</span>
         <Toggle label="Synth" on={settings.enabled} onChange={(enabled) => patch({ enabled })} />
