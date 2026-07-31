@@ -8,7 +8,7 @@
  *
  * Run: npm run test:synth
  */
-import { DEFAULT_SYNTH, arpSequence, midiToHz, midiToName } from '../src/audio/synth'
+import { DEFAULT_SYNTH, Synth, arpSequence, midiToHz, midiToName } from '../src/audio/synth'
 import { KEYS, OCTAVE_DOWN, OCTAVE_UP } from '../src/ui/Keyboard'
 
 let failures = 0
@@ -141,6 +141,47 @@ console.log('\n--- ARPEGGIATOR: pattern order ---')
     [...pool].every((n) => chord.includes(n)),
     `pool ${[...pool].join(' ')}`,
   )
+}
+
+// --- Latch -----------------------------------------------------------------
+// The note-set bookkeeping runs without an AudioContext (the context guards sit
+// on the sound, not the sets), so latch semantics are checkable here.
+console.log('\n--- LATCH: a toggle, not an accumulator ---')
+{
+  const s = new Synth()
+  s.update({ ...DEFAULT_SYNTH, enabled: true, arpOn: true, arpLatch: true })
+
+  const press = (m: number) => {
+    s.noteOn(m)
+    s.noteOff(m)
+  }
+  press(60)
+  press(64)
+  press(67)
+  check(
+    'released keys stay in the pattern',
+    [...s.sounding].join() === '60,64,67',
+    [...s.sounding].join(' '),
+  )
+
+  press(64)
+  check(
+    'pressing a latched note again removes it',
+    [...s.sounding].join() === '60,67',
+    `${[...s.sounding].join(' ')} (the only note-off a latched note can have)`,
+  )
+
+  press(64)
+  check(
+    'a removed note can be latched back',
+    [...s.sounding].join() === '60,67,64',
+    [...s.sounding].join(' '),
+  )
+
+  press(60)
+  press(67)
+  press(64)
+  check('emptying the latch empties the pattern', s.sounding.size === 0, 'no stuck notes')
 }
 
 // --- Defaults --------------------------------------------------------------

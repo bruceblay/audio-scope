@@ -291,7 +291,8 @@ export function SynthPanel({
                   onChange={(arpOctaves) => patch({ arpOctaves })}
                 />
                 {/* Latch keeps notes in the pattern after release, so a chord can
-                    be built up one key at a time and left running. */}
+                    be built up one key at a time and left running. Pressing a
+                    latched key again takes it back out. */}
                 <Cell name="Latch">
                   <Toggle
                     label="Latch"

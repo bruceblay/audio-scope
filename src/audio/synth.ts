@@ -324,13 +324,30 @@ export class Synth {
   }
 
   noteOn(midi: number) {
-    if (!this.settings.enabled || !this.ctx || !this.out) return
-    this.held.add(midi)
+    if (!this.settings.enabled) return
 
+    if (this.settings.arpOn && this.settings.arpLatch) {
+      // Latch is a toggle, not an accumulator. A latched note is sounding with
+      // no key held, so pressing its key again is the only note-off it can
+      // have; without this, the one way to remove a wrong note was to throw
+      // away the whole pattern with the latch switch. Hardware latches work
+      // this way for the same reason.
+      if (this.latched.has(midi)) {
+        this.latched.delete(midi)
+        this.held.add(midi)
+        if (this.latched.size === 0) this.stopArp()
+        this.onNotesChanged?.()
+        return
+      }
+      this.latched.add(midi)
+    }
+
+    this.held.add(midi)
+    // The context guards sit on the sound, not the bookkeeping, so the note
+    // sets stay truthful (and testable) even with no audio graph.
     if (this.settings.arpOn) {
-      if (this.settings.arpLatch) this.latched.add(midi)
-      if (!this.arpTimer) this.startArp()
-    } else if (!this.voices.has(midi)) {
+      if (this.ctx && !this.arpTimer) this.startArp()
+    } else if (this.ctx && this.out && !this.voices.has(midi)) {
       this.voices.set(midi, new Voice(this.ctx, this.out, midi, this.settings))
     }
     this.onNotesChanged?.()
