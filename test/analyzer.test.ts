@@ -177,6 +177,50 @@ console.log('\n--- CENTROID: silence does not produce a number ---')
 }
 
 // --- Low-end resolution ----------------------------------------------------
+console.log('\n--- SILENCE: -Infinity bins never become NaN ---')
+{
+  // A real AnalyserNode reports -Infinity for a bin with zero power, which the
+  // synthetic spectra here never did - every earlier test used finite floors,
+  // and the difference was two shipped bugs. -Inf minus -Inf is NaN, and once
+  // one NaN enters the averaged trace it never leaves (both branches of
+  // max-or-lerp keep it), so the curve and bars went blank after one silent
+  // frame and stayed blank. The spectrogram indexed its colour ramp with the
+  // same NaN and threw. This block feeds what the browser actually produces.
+  const bins = 1024
+  const top = usableTopHz(20000, SR)
+  const axis = buildAxis(600, 20, top, bins, SR)
+
+  const silent = new Float32Array(bins).fill(-Infinity)
+  let bad = -1
+  for (let x = 0; x < 600; x++) {
+    if (!Number.isFinite(magnitudeAt(silent, axis, x))) {
+      bad = x
+      break
+    }
+  }
+  check(
+    'an all-silent spectrum reads finite at every column',
+    bad === -1,
+    bad === -1 ? 'all 600 columns finite' : `column ${bad} is not finite`,
+  )
+
+  // Mixed case: one live bin in a silent spectrum. The columns interpolating
+  // between the live bin and a silent neighbour are the exact NaN site.
+  silent[40] = -30
+  let worst = 0
+  let nan = false
+  for (let x = 0; x < 600; x++) {
+    const v = magnitudeAt(silent, axis, x)
+    if (Number.isNaN(v)) nan = true
+    if (v > worst) worst = v
+  }
+  check(
+    'a lone tone in silence interpolates without NaN',
+    !nan && worst > -60,
+    nan ? 'NaN leaked' : `peak reads ${worst.toFixed(1)} dB, no NaN`,
+  )
+}
+
 console.log('\n--- LOW END: no stepped plateaus ---')
 {
   // On a log axis one FFT bin spans many pixels at the bottom of the range. At

@@ -82,7 +82,17 @@ export function magnitudeAt(
   const lo = Math.floor(c)
   const hi = Math.min(spectrum.length - 1, lo + 1)
   const f = c - lo
-  return spectrum[lo] + (spectrum[hi] - spectrum[lo]) * f
+  // Clamped, because a real AnalyserNode reports -Infinity for a bin with zero
+  // power, and -Inf minus -Inf is NaN. That NaN was invisible here and fatal
+  // downstream twice over: the averaged trace holds NaN forever (both branches
+  // of the max-or-lerp produce NaN once it is in), which blanked the curve and
+  // bars after one silent frame, and the spectrogram indexed its colour ramp
+  // with it, which threw. The max path above is immune only because it starts
+  // from floorDb. Synthetic test spectra used finite floors, which is why no
+  // harness ever reproduced what a genuinely silent tab produced immediately.
+  const a = Math.max(spectrum[lo], floorDb)
+  const b = Math.max(spectrum[hi], floorDb)
+  return a + (b - a) * f
 }
 
 /**

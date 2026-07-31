@@ -283,6 +283,16 @@ Worth stating, since it is the whole premise of the project:
   bright bands at yellow and cyan that read as features in the data which are not
   there. This is a well-documented failure and it is exactly the kind of
   dishonesty this project avoids elsewhere.
+- **Test with what the browser actually produces, including silence.** A real
+  `AnalyserNode` reports **-Infinity** for a bin with zero power. Every
+  synthetic test spectrum used finite floors, so `-Inf - -Inf = NaN` in the
+  interpolation path was invisible to eight headless repro attempts while a
+  genuinely silent tab produced it immediately. The NaN was then sticky - the
+  averaged trace keeps NaN through both branches of max-or-lerp - which blanked
+  the curve and bars permanently (the long-unreproduced "analyzer draws
+  nothing" report), and the spectrogram indexed its colour ramp with the same
+  NaN and threw. Fixed by clamping the interpolation endpoints to the floor;
+  `test/analyzer.test.ts` now feeds -Infinity spectra directly.
 
 ### Built-in signal generator
 
