@@ -41,6 +41,20 @@ export const CloseGlyph = () => (
  * Disclosure chevrons, pointing the way the panel will travel: down to fold the
  * control rail away, up to bring it back.
  */
+/** Floppy disk, browser-fx's drawing: the presets button. */
+export const DiskGlyph = () => (
+  <svg
+    {...base}
+    strokeWidth={1.5}
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M2.6 2.6h8.3l2.5 2.5v8.3H2.6z" />
+    <path d="M5.6 2.6v3.3h4.4V2.6" />
+    <path d="M5.2 13.4V9.6h5.6v3.8" />
+  </svg>
+)
+
 export const ChevronDown = () => (
   <svg {...base} width="13" height="13" strokeWidth={2} aria-hidden="true">
     <path d="M4 6.5l4 4 4-4" strokeLinejoin="round" />

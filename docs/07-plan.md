@@ -294,6 +294,24 @@ Worth stating, since it is the whole premise of the project:
   NaN and threw. Fixed by clamping the interpolation endpoints to the floor;
   `test/analyzer.test.ts` now feeds -Infinity spectra directly.
 
+### Presets (shipped)
+
+browser-fx's preset system, ported faithfully because its UX was already
+proven: disk icon in the header, popover with factory and user sections,
+"save as new" never overwrites, Update only appears for a user preset that has
+been modified, rename/delete ride the row on hover with an inline confirm.
+
+A preset captures the visualization scene - mode plus scope plus analyzer
+settings - and deliberately not the theme (an instrument preference, not a
+scene) or the synth (an input, not a display). Factory params are partial and
+merge over defaults at load, browser-fx's trick, so adding a setting later
+does not hole old presets. User presets live in chrome.storage.sync under
+`presets.v1`; the active preset id and its load-time snapshot persist with
+them, which is what makes the dirty asterisk survive a panel reopen.
+
+Factory list: Oscilloscope Music, Goniometer, Bench Classic, Storage Tube
+(scope) and Spectrogram Art, Mastering Balance, Third-Octave Bars (analyzer).
+
 ### Built-in signal generator
 
 A rudimentary synth, both as a feature and as test equipment. It is probably the

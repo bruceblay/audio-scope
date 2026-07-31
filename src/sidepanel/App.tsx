@@ -27,9 +27,20 @@ import {
 import { Stage, type ModeId } from '../ui/Stage'
 import type { ThemeId } from '../ui/tokens'
 import { Group, Row, Segmented } from '../ui/controls'
-import { ChevronDown, ChevronUp, InfoGlyph } from '../ui/glyphs'
+import { ChevronDown, ChevronUp, DiskGlyph, InfoGlyph } from '../ui/glyphs'
 import { Keyboard } from '../ui/Keyboard'
 import { AboutView } from './AboutView'
+import {
+  FACTORY_PRESETS,
+  PRESETS_KEY,
+  applyPreset,
+  isFactoryPreset,
+  newPresetId,
+  presetSignature,
+  uniqueName,
+  type Preset,
+} from './presets'
+import { PresetMenu } from './PresetMenu'
 import { AnalyzerPanel, AnalyzerReadouts } from './AnalyzerControls'
 import { CymaticsPanel, CymaticsReadouts } from './CymaticsControls'
 import { ScopePanel, ScopeReadouts } from './ScopeControls'
@@ -153,6 +164,11 @@ export function App() {
     { hint: string; detail: string; recoverable: boolean } | null
   >(null)
   const [showAbout, setShowAbout] = useState(false)
+  const [showPresets, setShowPresets] = useState(false)
+  const [userPresets, setUserPresets] = useState<Preset[]>([])
+  const [activePresetId, setActivePresetId] = useState<string | null>(null)
+  // What the loaded preset looked like when it was loaded, for the dirty flag.
+  const [presetSnapshot, setPresetSnapshot] = useState<string | null>(null)
   const [showControls, setShowControls] = useState(true)
   const [synthSettings, setSynthSettings] = useState<SynthSettings>(DEFAULT_SYNTH)
   const [octave, setOctave] = useState(DEFAULTS.octave)
@@ -390,6 +406,124 @@ export function App() {
     return () => window.clearInterval(id)
   }, [target?.id, connected])
 
+  // --- Presets ------------------------------------------------------------
+  useEffect(() => {
+    chrome.storage.sync.get(PRESETS_KEY).then((stored) => {
+      const saved = stored?.[PRESETS_KEY] as
+        | Partial<{ presets: Preset[]; activeId: string | null; snapshot: string | null }>
+        | undefined
+      if (!saved) return
+      if (Array.isArray(saved.presets)) setUserPresets(saved.presets)
+      if (typeof saved.activeId === 'string') setActivePresetId(saved.activeId)
+      if (typeof saved.snapshot === 'string') setPresetSnapshot(saved.snapshot)
+    })
+  }, [])
+
+  const persistPresets = useCallback(
+    (presets: Preset[], activeId: string | null, snapshot: string | null) => {
+      setUserPresets(presets)
+      setActivePresetId(activeId)
+      setPresetSnapshot(snapshot)
+      chrome.storage.sync
+        .set({ [PRESETS_KEY]: { presets, activeId, snapshot } })
+        .catch(() => {})
+    },
+    [],
+  )
+
+  const presetDirty =
+    activePresetId !== null &&
+    presetSnapshot !== null &&
+    presetSignature(mode === 'analyzer' ? 'analyzer' : 'scope', scope, analyzer) !==
+      presetSnapshot
+
+  const loadPreset = useCallback(
+    (p: Preset) => {
+      const applied = applyPreset(p)
+      setMode(applied.mode)
+      setScope(applied.scope)
+      setAnalyzer(applied.analyzer)
+      persistPresets(
+        userPresets,
+        p.id,
+        presetSignature(applied.mode, applied.scope, applied.analyzer),
+      )
+      setShowPresets(false)
+    },
+    [persistPresets, userPresets],
+  )
+
+  const currentPreset = useCallback(
+    (id: string, name: string): Preset => ({
+      id,
+      name,
+      mode: mode === 'analyzer' ? 'analyzer' : 'scope',
+      scope,
+      analyzer,
+    }),
+    [mode, scope, analyzer],
+  )
+
+  const savePresetAsNew = useCallback(
+    (name: string) => {
+      const p = currentPreset(
+        newPresetId(),
+        uniqueName(name, userPresets.map((u) => u.name)),
+      )
+      persistPresets(
+        [...userPresets, p],
+        p.id,
+        presetSignature(p.mode, scope, analyzer),
+      )
+      setShowPresets(false)
+    },
+    [currentPreset, persistPresets, userPresets, scope, analyzer],
+  )
+
+  const updateActivePreset = useCallback(() => {
+    if (!activePresetId || isFactoryPreset(activePresetId)) return
+    persistPresets(
+      userPresets.map((p) =>
+        p.id === activePresetId ? currentPreset(p.id, p.name) : p,
+      ),
+      activePresetId,
+      presetSignature(mode === 'analyzer' ? 'analyzer' : 'scope', scope, analyzer),
+    )
+    setShowPresets(false)
+  }, [activePresetId, currentPreset, persistPresets, userPresets, mode, scope, analyzer])
+
+  const renamePreset = useCallback(
+    (id: string, name: string) => {
+      persistPresets(
+        userPresets.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                name: uniqueName(
+                  name,
+                  userPresets.filter((o) => o.id !== id).map((o) => o.name),
+                ),
+              }
+            : p,
+        ),
+        activePresetId,
+        presetSnapshot,
+      )
+    },
+    [persistPresets, userPresets, activePresetId, presetSnapshot],
+  )
+
+  const deletePreset = useCallback(
+    (id: string) => {
+      persistPresets(
+        userPresets.filter((p) => p.id !== id),
+        activePresetId === id ? null : activePresetId,
+        activePresetId === id ? null : presetSnapshot,
+      )
+    },
+    [persistPresets, userPresets, activePresetId, presetSnapshot],
+  )
+
   // --- Settings persistence ----------------------------------------------
   useEffect(() => {
     chrome.storage.sync.get(STORE_KEY).then((stored) => {
@@ -495,6 +629,16 @@ export function App() {
         <button
           type="button"
           className="info-btn"
+          aria-label="Presets"
+          title="Presets"
+          aria-expanded={showPresets}
+          onClick={() => setShowPresets((v) => !v)}
+        >
+          <DiskGlyph />
+        </button>
+        <button
+          type="button"
+          className="info-btn"
           aria-label="About Audio Scope"
           title="About Audio Scope"
           onClick={() => setShowAbout(true)}
@@ -503,6 +647,31 @@ export function App() {
         </button>
       </div>
       <div className="seam" />
+
+      {showPresets && (
+        <PresetMenu
+          userPresets={userPresets}
+          factoryPresets={FACTORY_PRESETS}
+          activeId={activePresetId}
+          dirty={presetDirty}
+          suggestedName={uniqueName(
+            mode === 'analyzer'
+              ? analyzer.view === 'spectrogram'
+                ? 'Waterfall'
+                : 'Spectrum'
+              : scope.channel === 'xy'
+                ? 'X-Y'
+                : 'Scope',
+            userPresets.map((p) => p.name),
+          )}
+          onLoad={loadPreset}
+          onSaveNew={savePresetAsNew}
+          onUpdate={updateActivePreset}
+          onRename={renamePreset}
+          onDelete={deletePreset}
+          onClose={() => setShowPresets(false)}
+        />
+      )}
 
       <Stage
         engine={engine}

@@ -114,6 +114,14 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           </li>
         </ul>
 
+        <h4>presets</h4>
+        <p>
+          The disk icon in the header saves and recalls complete setups. Factory presets
+          cover the classics (oscilloscope music, spectrogram art, a stock bench scope),
+          and saving never overwrites: your presets are yours until you update or delete
+          them.
+        </p>
+
         <h4>panel</h4>
         <p>
           <strong>Studio</strong> is the dark panel. <strong>Bench</strong> is a light one

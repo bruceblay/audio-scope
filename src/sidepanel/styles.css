@@ -87,6 +87,7 @@ body {
 /* ---------------------------------------------------------------- shell -- */
 
 .app {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -884,6 +885,154 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   pointer-events: none;
+}
+
+/* ------------------------------------------------------------- presets -- */
+
+/* Popover below the header, browser-fx's preset menu in this panel's skin. */
+.preset-catcher {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+}
+
+.preset-menu {
+  position: absolute;
+  top: 44px;
+  left: 8px;
+  right: 8px;
+  z-index: 10;
+  max-height: 60%;
+  display: flex;
+  flex-direction: column;
+  background: var(--control);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    0 6px 18px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.preset-list {
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.preset-section {
+  padding: 6px 10px 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  color: var(--faint);
+  user-select: none;
+}
+
+.preset-section-divided {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.preset-row:hover:not(.preset-row-static) {
+  background: var(--raised);
+}
+
+.preset-row-static {
+  cursor: default;
+}
+
+.preset-action-row {
+  color: var(--legend);
+}
+
+.preset-glyph {
+  color: var(--live);
+  flex: none;
+}
+
+.preset-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-name[data-active='true'] {
+  color: var(--live);
+}
+
+/* Rename and delete ride the row, visible on hover like browser-fx. */
+.preset-actions {
+  display: none;
+  flex: none;
+  gap: 2px;
+}
+
+.preset-row:hover .preset-actions,
+.preset-row:focus-within .preset-actions {
+  display: flex;
+}
+
+.preset-micro {
+  border: 0;
+  background: none;
+  padding: 0 3px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.preset-micro:hover {
+  color: var(--text);
+}
+
+.preset-micro.is-danger {
+  color: var(--error);
+}
+
+.preset-confirm {
+  background: rgba(255, 107, 94, 0.1);
+}
+
+.preset-confirm .preset-name {
+  color: var(--legend);
+  font-size: 10.5px;
+}
+
+.preset-empty {
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.preset-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--chassis);
+  border: 1px solid var(--live);
+  border-radius: 2px;
+  padding: 2px 5px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text);
+  outline: none;
 }
 
 /* ---------------------------------------------------------- source bar -- */
