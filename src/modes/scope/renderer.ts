@@ -18,6 +18,7 @@ import {
   type ScopeReadout,
   type ScopeSettings,
 } from './settings'
+import { bandlimit, bwKernel } from './bandwidth'
 import { Trigger } from './trigger'
 
 /** Alpha quantization levels. Segments are grouped by level so each level strokes once. */
@@ -179,13 +180,45 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   }
 
   // ------------------------------------------------------------------------
+  // Bandwidth limit
+  // ------------------------------------------------------------------------
+
+  private bwK: Float32Array | null = null
+  private bwKey = ''
+  // One scratch record per channel in use (sweep, X-Y left, X-Y right),
+  // allocated on first use at record length and reused every frame after.
+  private bwBufs: (Float32Array | null)[] = [null, null, null]
+
+  /** The signal the beam sees: raw at full bandwidth, filtered under BW limit. */
+  private bandlimited(
+    src: Float32Array,
+    sampleRate: number,
+    cutoffHz: number,
+    slot: number,
+  ): Float32Array {
+    const key = `${cutoffHz}:${sampleRate}`
+    if (key !== this.bwKey) {
+      this.bwKey = key
+      this.bwK = bwKernel(cutoffHz, sampleRate)
+    }
+    if (!this.bwK) return src
+    let dst = this.bwBufs[slot]
+    if (!dst || dst.length !== src.length) dst = this.bwBufs[slot] = new Float32Array(src.length)
+    bandlimit(src, dst, this.bwK)
+    return dst
+  }
+
+  // ------------------------------------------------------------------------
   // Beam geometry
   // ------------------------------------------------------------------------
 
   /** Standard time-base sweep: voltage against time, started at the trigger point. */
   private buildSweep(frame: AudioFrame, s: ScopeSettings) {
-    const buf =
+    const raw =
       s.channel === 'left' ? frame.timeL : s.channel === 'right' ? frame.timeR : frame.timeMono
+    // BW limit filters ahead of the trigger, exactly like the real button: the
+    // noise that scribbles the trace is the same noise that jitters the edge.
+    const buf = this.bandlimited(raw, frame.sampleRate, s.bandwidth, 0)
     const len = buf.length
 
     // Samples the sweep covers. Most time bases are a window into the record
@@ -268,9 +301,13 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     const exposure = Math.round(clamp(s.xyExposure, 2, Math.min(record, MAX_POINTS)))
     const from = record - exposure
 
+    // BW limit runs upstream of the display smoothing: the limiter sets what
+    // signal exists, the smoothing stays the aesthetic control it always was.
+    const srcL = this.bandlimited(frame.timeL, frame.sampleRate, s.bandwidth, 1)
+    const srcR = this.bandlimited(frame.timeR, frame.sampleRate, s.bandwidth, 2)
     const half = Math.round(clamp(s.xySmoothing, 0, 1) * MAX_SMOOTH_HALF)
-    smoothInto(frame.timeL, from, exposure, half, this.smoothX, this.smoothTmp)
-    smoothInto(frame.timeR, from, exposure, half, this.smoothY, this.smoothTmp)
+    smoothInto(srcL, from, exposure, half, this.smoothX, this.smoothTmp)
+    smoothInto(srcR, from, exposure, half, this.smoothY, this.smoothTmp)
 
     // Square plot area centered in the canvas, so a circle reads as a circle.
     const size = Math.min(this.w, this.h)

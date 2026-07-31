@@ -240,5 +240,60 @@ console.log('\n--- TRIGGER: DC-offset signal (auto level must follow) ---')
   )
 }
 
+// --- Bandwidth limit -------------------------------------------------------
+{
+  const { bwKernel, bandlimit } = await import('../src/modes/scope/bandwidth')
+  console.log('\n--- BW LIMIT: a real filter, not a vibe ---')
+
+  const SR = 48000
+  const N = 4096
+  const gainAt = (hz: number, cutoff: number) => {
+    const k = bwKernel(cutoff, SR)
+    if (!k) return 1
+    const src = new Float32Array(N)
+    for (let i = 0; i < N; i++) src[i] = Math.sin((2 * Math.PI * hz * i) / SR)
+    const dst = new Float32Array(N)
+    bandlimit(src, dst, k)
+    // Peak over the middle half, away from the clamped edges.
+    let peak = 0
+    for (let i = N / 4; i < (3 * N) / 4; i++) {
+      const v = Math.abs(dst[i])
+      if (v > peak) peak = v
+    }
+    return peak
+  }
+
+  check('full bandwidth is a bypass', bwKernel(0, SR) === null, 'no kernel, no cost')
+  check('DC passes at unity', Math.abs(1 - gainDC(2000)) < 0.001, `${gainDC(2000).toFixed(4)}`)
+
+  // Every offered cutoff, not a sample of them. The 8 kHz step failed this
+  // check (sigma under one sample misstates the cutoff by over 1 dB) and was
+  // removed from the panel rather than excused in the test.
+  for (const fc of [4000, 2000, 1000, 500]) {
+    const g = gainAt(fc, fc)
+    check(
+      `${fc} Hz setting is -3 dB at ${fc} Hz`,
+      Math.abs(20 * Math.log10(g) + 3) < 0.6,
+      `${(20 * Math.log10(g)).toFixed(2)} dB`,
+    )
+    // Two octaves up must be gone. Kept below Nyquist, which the first draft
+    // of this check was not - a 32 kHz probe aliased to 16 kHz and "failed".
+    const g4 = gainAt(fc * 4, fc)
+    check(
+      `${fc} Hz setting crushes ${fc * 4} Hz`,
+      20 * Math.log10(Math.max(g4, 1e-9)) < -30,
+      `${(20 * Math.log10(Math.max(g4, 1e-9))).toFixed(1)} dB (Gaussian: no sidelobe leakage)`,
+    )
+  }
+
+  function gainDC(cutoff: number) {
+    const k = bwKernel(cutoff, SR)!
+    const src = new Float32Array(N).fill(0.5)
+    const dst = new Float32Array(N)
+    bandlimit(src, dst, k)
+    return dst[N >> 1] / 0.5
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`)
 process.exit(failures === 0 ? 0 : 1)

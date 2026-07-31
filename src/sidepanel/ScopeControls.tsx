@@ -9,6 +9,7 @@ import {
   type TriggerMode,
   type TriggerSlope,
 } from '../modes/scope/settings'
+import { BW_OPTIONS } from '../modes/scope/bandwidth'
 import { Group, Readout, Row, Segmented, Slider, Stepper } from '../ui/controls'
 import { phosphor, type PhosphorId } from '../ui/tokens'
 
@@ -79,6 +80,18 @@ export function ScopePanel({
             value={settings.voltsPerDiv}
             format={(v) => (v < 1 ? `${(v * 1000).toFixed(0)} mFS` : `${v.toFixed(0)} FS`)}
             onChange={(voltsPerDiv) => patch({ voltsPerDiv })}
+          />
+        </Row>
+        {/* The BW LIMIT button. Off preserves the scribble, which is part of
+            the instrument's character; each step down cleans it honestly, in
+            hertz, and steadies the trigger with it. */}
+        <Row label="BW limit">
+          <Stepper
+            label="Bandwidth limit"
+            options={BW_OPTIONS}
+            value={settings.bandwidth as (typeof BW_OPTIONS)[number]}
+            format={(v) => (v === 0 ? 'Full' : v >= 1000 ? `${v / 1000} kHz` : `${v} Hz`)}
+            onChange={(bandwidth) => patch({ bandwidth })}
           />
         </Row>
         {!isXY && (

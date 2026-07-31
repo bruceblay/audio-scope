@@ -39,6 +39,8 @@ export const DIV_Y = 8
 
 export interface ScopeSettings {
   channel: Channel
+  /** Vertical-channel -3 dB cutoff in Hz; 0 is full bandwidth. */
+  bandwidth: number
   timePerDiv: number
   voltsPerDiv: number
   /** Vertical offset in divisions. */
@@ -92,6 +94,9 @@ export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
   // away and arguably the more interesting mode on music, but it reads as
   // abstract art until you know what you are looking at.
   channel: 'sum',
+  // Full bandwidth. The scribble on real material is part of the instrument's
+  // character; BW limit is the control that cleans it up when wanted.
+  bandwidth: 0,
   timePerDiv: 1e-3,
   voltsPerDiv: 0.1,
   positionY: 0,

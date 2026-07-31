@@ -75,6 +75,11 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             tighter and more immediate; persistence supplies the tail.
           </li>
           <li>
+            <strong>BW limit</strong> is the bench scope's cleanup button: a lowpass on the
+            vertical channel, in hertz. If the trace looks scribbly on compressed sources,
+            step it down; it also steadies the trigger.
+          </li>
+          <li>
             <strong>Persistence</strong> is phosphor afterglow. <strong>Focus</strong> is
             beam width, <strong>Intensity</strong> is brightness — two separate knobs, as on
             the real thing.

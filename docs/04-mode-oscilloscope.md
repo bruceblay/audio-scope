@@ -187,6 +187,29 @@ is playing a ~128 kbps Opus stream of it. The figures will not be equally crisp,
 and no amount of filtering recovers samples the encoder discarded. Filtering
 trades fuzz for rounded corners, and past a point the corners are what is left.
 
+### BW limit
+
+The X-Y smoothing above is an aesthetic control and it stays one. The honest
+cleanup control is the one a bench scope actually has: **BW LIMIT**, a lowpass
+on the vertical channel, labeled in hertz. It sits in the Vertical section and
+applies to both the sweep and X-Y, ahead of the trigger - deliberately so,
+because the HF noise that scribbles the trace is the same noise that jitters
+the trigger edge, which is why the real button exists.
+
+The filter is a Gaussian FIR (`src/modes/scope/bandwidth.ts`), the response
+scope front ends are deliberately designed toward: monotonic step response, no
+ringing, no sidelobes. The box-cascade smoothing leaks HF through its sidelobes
+- the same lesson the analyzer's smoothing taught - which is part of why maxed
+smoothing never fully tamed the scribble. Verified in `test/dsp.test.ts`:
+every offered cutoff reads within 0.03 dB of -3 dB at its stated frequency and
+crushes two octaves up by ~50 dB. The range starts at 4 kHz because at 8 kHz
+sigma falls below one sample and a sampled Gaussian that narrow misstates its
+own cutoff by over a decibel; the test caught it and the step was removed
+rather than excused.
+
+Default is Full: the scribble on real material is part of the instrument's
+character, and cleaning it up is a choice, not a correction.
+
 ## CRT rendering
 
 The look is not a filter over a line chart. It is a model of what an analog scope
