@@ -111,6 +111,19 @@ export function AnalyzerPanel({
       </Group>
 
       <Group title="Display">
+        {/* Same two disciplines as the scope: the continuous instrument, or
+            the character grid. One switch for both analyzer views. */}
+        <Row label="Style">
+          <Segmented<'crt' | 'tui'>
+            label="Display style"
+            value={settings.displayStyle}
+            onChange={(displayStyle) => patch({ displayStyle })}
+            options={[
+              { value: 'crt', label: 'CRT' },
+              { value: 'tui', label: 'TUI' },
+            ]}
+          />
+        </Row>
         {isSpectrogram ? (
           <Row label="Colour">
             <Segmented<ColorMap>

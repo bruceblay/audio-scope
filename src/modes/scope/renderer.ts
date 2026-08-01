@@ -19,7 +19,7 @@ import {
   type ScopeSettings,
 } from './settings'
 import { bandlimit, bwKernel } from './bandwidth'
-import { CellGrid, TUI_TICK, TUI_LEVELS } from './tui'
+import { CellGrid, TUI_TICK, TUI_LEVELS } from '../../lib/tui'
 import { Trigger } from './trigger'
 
 /** Alpha quantization levels. Segments are grouped by level so each level strokes once. */

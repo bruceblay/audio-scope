@@ -1,3 +1,5 @@
+import type { DisplayStyle } from '../../lib/tui'
+
 export type AnalyzerView = 'spectrum' | 'spectrogram'
 
 /**
@@ -61,6 +63,9 @@ export const BANDS_PER_OCTAVE = [1, 3, 6] as const
 
 export interface AnalyzerSettings {
   view: AnalyzerView
+  /** 'crt' is the continuous instrument; 'tui' the character-cell discipline
+   * shared with the scope. */
+  displayStyle: DisplayStyle
 
   /** Visible frequency range. The top is clamped to just under Nyquist. */
   minHz: number
@@ -100,6 +105,7 @@ export interface AnalyzerSettings {
 
 export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   view: 'spectrum',
+  displayStyle: 'crt',
   minHz: 20,
   maxHz: 20000,
   floorDb: -96,

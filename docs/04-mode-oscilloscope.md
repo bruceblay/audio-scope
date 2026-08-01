@@ -270,6 +270,15 @@ set of real constraints, which is where the look comes from.
 Everything upstream is shared with the CRT path: trigger, sweep, X-Y
 projection, BW limit, smoothing, and all measurements.
 
+The analyzer shares the discipline (`src/lib/tui.ts` holds the common cell
+machinery): its curve becomes a dotted outline with vertical cliffs walked
+dot by dot, bars become the stacked half-cell block ladder every hardware RTA
+and cassette deck drew, and the waterfall quantizes its colour ramp to six
+colours with 4x4 Bayer ordered dithering at cell resolution - ordered rather
+than error-diffused or random because a fixed threshold pattern adds no
+texture that is not in the data. Both modes switch styles independently, from
+their own Display sections.
+
 ## CRT rendering
 
 The look is not a filter over a line chart. It is a model of what an analog scope

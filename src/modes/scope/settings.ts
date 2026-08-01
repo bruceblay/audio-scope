@@ -4,13 +4,10 @@ export type TriggerMode = 'auto' | 'normal' | 'free'
 export type TriggerSlope = 'rising' | 'falling' | 'either'
 export type Channel = 'left' | 'right' | 'sum' | 'xy'
 
-/**
- * How the trace is painted. 'crt' is the beam-and-phosphor model; 'tui' draws
- * the same signal as a terminal would - a character-cell lattice with
- * quantized brightness and a ~18 Hz refresh. Two display disciplines, one
- * instrument; everything upstream of the paint is shared.
- */
-export type DisplayStyle = 'crt' | 'tui'
+// The display discipline lives in lib/tui.ts now that the analyzer shares it;
+// re-exported here so the scope's controls keep one import site.
+export type { DisplayStyle } from '../../lib/tui'
+import type { DisplayStyle } from '../../lib/tui'
 
 /**
  * 1-2-5 sequences, as on a real front panel. Values above ~8.5ms/div exceed the

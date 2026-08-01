@@ -16,6 +16,12 @@
  * beam travel makes bright cells exactly as it makes bright phosphor.
  */
 
+/**
+ * How the trace is painted, shared by the scope and the analyzer: 'crt' is
+ * the continuous instrument model, 'tui' is the character-cell discipline.
+ */
+export type DisplayStyle = 'crt' | 'tui'
+
 /** Terminal refresh: ~18 Hz. The slight choppiness is part of the discipline. */
 export const TUI_TICK = 1 / 18
 
@@ -28,6 +34,14 @@ const CELL_H = 14
 
 /** Cap on line-walk steps per segment, to bound the per-tick cost. */
 const MAX_STEPS = 128
+
+/** The character-cell metrics every TUI surface shares. */
+export function cellMetrics(dpr: number) {
+  return {
+    cellW: Math.max(4, Math.round(CELL_W * dpr)),
+    cellH: Math.max(8, Math.round(CELL_H * dpr)),
+  }
+}
 
 export class CellGrid {
   cols = 0
@@ -44,8 +58,9 @@ export class CellGrid {
   private runningMax = 0
 
   resize(width: number, height: number, dpr: number) {
-    this.cellW = Math.max(4, Math.round(CELL_W * dpr))
-    this.cellH = Math.max(8, Math.round(CELL_H * dpr))
+    const m = cellMetrics(dpr)
+    this.cellW = m.cellW
+    this.cellH = m.cellH
     this.cols = Math.max(1, Math.floor(width / this.cellW))
     this.rows = Math.max(1, Math.floor(height / this.cellH))
     this.gw = this.cols * 2

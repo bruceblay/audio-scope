@@ -109,6 +109,10 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             balance against.
           </li>
           <li>
+            <strong>Style</strong> works here too: TUI redraws the curve as dots, the bars
+            as blocks, and the waterfall as a dithered character grid.
+          </li>
+          <li>
             <strong>Window</strong> trades latency against low-end detail: 21 ms feels
             immediate but cannot resolve much under 100 Hz, while 683 ms separates individual
             bass partials and visibly lags.

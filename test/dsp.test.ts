@@ -297,7 +297,7 @@ console.log('\n--- TRIGGER: DC-offset signal (auto level must follow) ---')
 
 // --- TUI cell lattice ------------------------------------------------------
 {
-  const { CellGrid } = await import('../src/modes/scope/tui')
+  const { CellGrid } = await import('../src/lib/tui')
   console.log('\n--- TUI: the lattice is a real quantization ---')
 
   const g = new CellGrid()
