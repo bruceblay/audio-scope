@@ -265,8 +265,6 @@ class Voice {
 export class Synth {
   private ctx: AudioContext | null = null
   private out: GainNode | null = null
-  /** Dry path to the bus, duckable while the vocoder wears the synth. */
-  private dry: GainNode | null = null
   private settings: SynthSettings = DEFAULT_SYNTH
 
   /** Notes physically held down. */
@@ -292,20 +290,7 @@ export class Synth {
     this.ctx = ctx
     this.out = ctx.createGain()
     this.out.gain.value = 1
-    this.dry = ctx.createGain()
-    this.dry.gain.value = 1
-    this.out.connect(this.dry)
-    this.dry.connect(destination)
-  }
-
-  /** The synth's full output, for the vocoder's carrier tap. */
-  get carrierTap(): AudioNode | null {
-    return this.out
-  }
-
-  /** Duck or restore the synth's dry level while the vocoder is engaged. */
-  setDryLevel(v: number) {
-    if (this.dry && this.ctx) this.dry.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03)
+    this.out.connect(destination)
   }
 
   setNotesChangedHandler(fn: (() => void) | null) {
@@ -389,15 +374,12 @@ export class Synth {
 
   dispose() {
     this.allNotesOff()
-    for (const node of [this.out, this.dry]) {
-      try {
-        node?.disconnect()
-      } catch {
-        // Already disconnected.
-      }
+    try {
+      this.out?.disconnect()
+    } catch {
+      // Already disconnected.
     }
     this.out = null
-    this.dry = null
     this.ctx = null
   }
 
