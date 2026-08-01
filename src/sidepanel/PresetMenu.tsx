@@ -18,6 +18,14 @@ export interface ExportedSetup {
 
 type Editing = { mode: 'new' | 'rename'; id?: string }
 
+/**
+ * The JSON-export row was the loop for tuning the factory presets: dial a look
+ * in by eye, copy it out, pin the values verbatim in presets.ts. Hidden now
+ * that the tuning phase is done, kept for the next one. Flip to true to bring
+ * the row back.
+ */
+const SHOW_EXPORT = false
+
 export function PresetMenu({
   userPresets,
   factoryPresets,
@@ -196,10 +204,7 @@ export function PresetMenu({
           </div>
         )}
 
-        {/* The tuning loop: dial a look in by eye, copy it out as JSON, and
-            the values go back into a factory preset verbatim - no guessing at
-            aesthetics in code. Includes the user presets, so saved candidates
-            travel too. */}
+        {SHOW_EXPORT && (
         <div
           className="preset-row preset-action-row"
           role="button"
@@ -216,6 +221,7 @@ export function PresetMenu({
           <span className="preset-glyph">{copied ? '✓' : '⎘'}</span>
           {copied ? 'copied to clipboard' : 'copy setup as JSON'}
         </div>
+        )}
 
         {activeIsUser && dirty && (
           <div
