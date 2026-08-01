@@ -33,6 +33,9 @@ export class AudioEngine {
    * a tab attached, and lets both run at once.
    */
   private bus: GainNode | null = null
+  /** The tab's dry path into the bus, duckable by the vocoder. Unity gain
+   * always, except while the vocoder is explicitly engaged. */
+  private dry: GainNode | null = null
   private splitter: ChannelSplitterNode | null = null
   private analyserL: AnalyserNode | null = null
   private analyserR: AnalyserNode | null = null
@@ -137,6 +140,9 @@ export class AudioEngine {
     if (this.bus) return ctx
 
     this.bus = ctx.createGain()
+    this.dry = ctx.createGain()
+    this.dry.gain.value = 1
+    this.dry.connect(this.bus)
     this.outputGain = ctx.createGain()
     this.outputGain.gain.value = 1
     this.bus.connect(this.outputGain)
@@ -168,6 +174,17 @@ export class AudioEngine {
     return this.bus
   }
 
+  /** The raw captured source, for the vocoder's modulator tap. */
+  get modulatorTap(): AudioNode | null {
+    return this.source
+  }
+
+  /** Duck or restore the tab's dry level. 1 is the untouched-passthrough
+   * promise; anything else only ever happens with the vocoder explicitly on. */
+  setDryLevel(v: number) {
+    if (this.dry && this.ctx) this.dry.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03)
+  }
+
   /**
    * Route a captured stream into the graph. Playback to ctx.destination is
    * mandatory: tabCapture *redirects* the tab's audio, so without this the tab
@@ -179,7 +196,7 @@ export class AudioEngine {
 
     this.stream = stream
     this.source = ctx.createMediaStreamSource(stream)
-    this.source.connect(this.bus!)
+    this.source.connect(this.dry!)
 
     this.lastTime = 0
     this.detector.reset()
@@ -191,6 +208,9 @@ export class AudioEngine {
    * docs/01-architecture.md#teardown calls this.
    */
   detach() {
+    // Whatever ducked the dry path, detaching un-ducks it: the next capture
+    // must start from untouched passthrough.
+    if (this.dry && this.ctx) this.dry.gain.setTargetAtTime(1, this.ctx.currentTime, 0.01)
     if (this.stream) {
       for (const track of this.stream.getTracks()) track.stop()
       this.stream = null
@@ -218,6 +238,7 @@ export class AudioEngine {
     this.detach()
     for (const node of [
       this.bus,
+      this.dry,
       this.splitter,
       this.analyserL,
       this.analyserR,

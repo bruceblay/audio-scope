@@ -85,12 +85,20 @@ function Toggle({
   )
 }
 
+export interface VocoderState {
+  enabled: boolean
+  wet: number
+  sibilance: number
+}
+
 export function SynthPanel({
   settings,
   patch,
   octave,
   onOctave,
   sectionRef,
+  vocoder,
+  patchVocoder,
 }: {
   settings: SynthSettings
   patch: (next: Partial<SynthSettings>) => void
@@ -98,6 +106,10 @@ export function SynthPanel({
   onOctave: (v: number) => void
   /** So the app can scroll the section into view when the synth turns on. */
   sectionRef?: React.Ref<HTMLElement>
+  /** Null while no tab is connected: the easter egg has no modulator, so the
+   * bank does not exist. */
+  vocoder: VocoderState | null
+  patchVocoder: (next: Partial<VocoderState>) => void
 }) {
   return (
     <section className="group synth" ref={sectionRef}>
@@ -237,6 +249,44 @@ export function SynthPanel({
               onChange={(level) => patch({ level })}
             />
           </Bank>
+
+          {/* The easter egg. Only exists while a tab is connected, because a
+              vocoder without a voice has nothing to say: the tab is the
+              modulator, the synth is the carrier. Hold a chord (latch helps)
+              while the tab talks. */}
+          {vocoder && (
+            <Bank name="Vocoder">
+              <Cell name="Run">
+                <Toggle
+                  label="Vocoder"
+                  on={vocoder.enabled}
+                  onChange={(enabled) => patchVocoder({ enabled })}
+                />
+              </Cell>
+              <div className="arp-rest" inert={!vocoder.enabled}>
+                <Knob
+                  label="Wet"
+                  value={vocoder.wet}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  reset={0.85}
+                  format={(v) => `${Math.round(v * 100)}%`}
+                  onChange={(wet) => patchVocoder({ wet })}
+                />
+                <Knob
+                  label="Ess"
+                  value={vocoder.sibilance}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  reset={0.6}
+                  format={(v) => `${Math.round(v * 100)}%`}
+                  onChange={(sibilance) => patchVocoder({ sibilance })}
+                />
+              </div>
+            </Bank>
+          )}
 
           {/* After the audio chain, not inside it. The arpeggiator is a
               performance control, so it sits last - nearest the keyboard it

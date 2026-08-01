@@ -294,6 +294,31 @@ Worth stating, since it is the whole premise of the project:
   NaN and threw. Fixed by clamping the interpolation endpoints to the floor;
   `test/analyzer.test.ts` now feeds -Infinity spectra directly.
 
+### Vocoder (shipped, easter egg)
+
+A 16-band channel vocoder: the captured tab is the modulator, the synth is the
+carrier. The bank only renders while a tab is connected, because a vocoder
+without a voice has nothing to say, and the enabled flag is session-only - it
+never persists as on.
+
+This is the one deliberate exception to "audio passes through untouched", and
+it is fenced accordingly: the tab's dry path runs through a unity-gain node
+that only ever ducks while the vocoder is explicitly engaged; `detach()`
+unconditionally restores it; and losing either signal (disconnect, synth off)
+disables the vocoder, resets the switch, and restores dry passthrough in one
+effect. Wet mixes vocoded output against both dry signals.
+
+The graph is the canonical no-worklet Web Audio design: per band, modulator
+through cascaded bandpasses into a rectifier (WaveShaper |x|) and a 40 Hz
+lowpass, producing the loudness envelope as an audio-rate signal that drives
+the gain AudioParam of the carrier's matching bandpasses. Constant Q sized so
+adjacent bands meet at -3 dB; 80 Hz to 7.5 kHz, the classic hardware layout.
+Sibilance is gated highpassed noise above 5 kHz - consonants are noise, not
+pitch - as on the Sennheiser and EMS hardware.
+
+Sound is the one thing the headless harness cannot verify, so the verification
+step is ears: hold a latched chord while a podcast talks.
+
 ### Presets (shipped)
 
 browser-fx's preset system, ported faithfully because its UX was already

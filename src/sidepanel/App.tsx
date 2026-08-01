@@ -9,6 +9,7 @@ import {
 } from '../audio/capture'
 import { AudioEngine } from '../audio/engine'
 import { DEFAULT_SYNTH, Synth, type SynthSettings } from '../audio/synth'
+import { Vocoder } from '../audio/vocoder'
 import {
   DEFAULT_ANALYZER_SETTINGS,
   type AnalyzerReadout,
@@ -156,6 +157,7 @@ export function App() {
   // so it survives StrictMode's double-invoke.
   const [engine] = useState(() => new AudioEngine())
   const [synth] = useState(() => new Synth())
+  const [vocoder] = useState(() => new Vocoder())
 
   const [target, setTarget] = useState<TabTarget | null>(null)
   const [connected, setConnected] = useState(false)
@@ -171,6 +173,10 @@ export function App() {
   const [presetSnapshot, setPresetSnapshot] = useState<string | null>(null)
   const [showControls, setShowControls] = useState(true)
   const [synthSettings, setSynthSettings] = useState<SynthSettings>(DEFAULT_SYNTH)
+  // The vocoder easter egg. Enabled is session-only by design: an extension
+  // that alters the tab's audio on open would be hostile, so only wet and
+  // sibilance persist.
+  const [voc, setVoc] = useState({ enabled: false, wet: 0.85, sibilance: 0.6 })
   const [octave, setOctave] = useState(DEFAULTS.octave)
   const [sounding, setSounding] = useState<Set<number>>(() => new Set())
 
@@ -371,6 +377,47 @@ export function App() {
   }, [synth])
 
   useEffect(() => () => synth.dispose(), [synth])
+
+  // --- Vocoder ------------------------------------------------------------
+  // Exists only while both signals exist: the tab is the modulator and the
+  // synth is the carrier. Any leg dropping - disconnect, synth off, toggle -
+  // restores untouched passthrough immediately.
+  useEffect(() => {
+    const on = voc.enabled && connected && synthSettings.enabled
+    if (!on) {
+      vocoder.disable()
+      engine.setDryLevel(1)
+      synth.setDryLevel(1)
+      return
+    }
+    let cancelled = false
+    engine.ensureContext().then((ctx) => {
+      if (cancelled) return
+      const mod = engine.modulatorTap
+      const car = synth.carrierTap
+      const bus = engine.analysisBus
+      if (!mod || !car || !bus) return
+      vocoder.connect(ctx, mod, car, bus)
+      vocoder.enable()
+      vocoder.setWet(voc.wet)
+      vocoder.setSibilance(voc.sibilance)
+      engine.setDryLevel(1 - voc.wet)
+      synth.setDryLevel(1 - voc.wet)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [vocoder, engine, synth, voc, connected, synthSettings.enabled])
+
+  // Losing either signal also resets the switch itself, so the bank reads
+  // honestly when the signals come back.
+  useEffect(() => {
+    if (voc.enabled && (!connected || !synthSettings.enabled)) {
+      setVoc((v) => ({ ...v, enabled: false }))
+    }
+  }, [voc.enabled, connected, synthSettings.enabled])
+
+  useEffect(() => () => vocoder.dispose(), [vocoder])
 
   // Turning the synth on reveals its controls. The synth section is at the
   // bottom of the rail and the keyboard strip appears below it in the same
@@ -790,6 +837,8 @@ export function App() {
           octave={octave}
           onOctave={setOctave}
           sectionRef={synthSection}
+          vocoder={connected ? voc : null}
+          patchVocoder={(next) => setVoc((v) => ({ ...v, ...next }))}
         />
       </div>
 
