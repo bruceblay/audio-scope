@@ -81,6 +81,7 @@ export const midiToName = (midi: number) =>
 class Voice {
   private readonly oscA: OscillatorNode
   private readonly oscB: OscillatorNode
+  private readonly mix: GainNode
   private readonly filter: BiquadFilterNode
   private readonly amp: GainNode
   private stopped = false
@@ -106,6 +107,13 @@ class Voice {
     this.amp = ctx.createGain()
     this.amp.gain.value = 0
 
+    // Half gain per oscillator: native oscillators are full scale, so the
+    // detuned pair summed straight into the filter peaked at 2.0 FS before the
+    // level control ever saw it - the root of the audible clipping.
+    this.mix = ctx.createGain()
+    this.mix.gain.value = 0.5
+    this.mix.connect(this.filter)
+
     this.oscA = ctx.createOscillator()
     this.oscB = ctx.createOscillator()
     for (const [osc, sign] of [
@@ -117,7 +125,7 @@ class Voice {
       // Two oscillators a few cents apart is the cheapest way to sound like an
       // instrument rather than a test tone, and at detune 0 they simply sum.
       osc.detune.value = (sign * s.detune) / 2
-      osc.connect(this.filter)
+      osc.connect(this.mix)
       osc.start(now)
     }
 
@@ -252,7 +260,7 @@ class Voice {
   }
 
   private disconnect() {
-    for (const node of [this.oscA, this.oscB, this.filter, this.amp]) {
+    for (const node of [this.oscA, this.oscB, this.mix, this.filter, this.amp]) {
       try {
         node.disconnect()
       } catch {
@@ -265,6 +273,11 @@ class Voice {
 export class Synth {
   private ctx: AudioContext | null = null
   private out: GainNode | null = null
+  /** Brickwall on the synth's own output - resonance boost and stacked voices
+   * are unbounded, and a limiter is how every synth keeps a resonant filter
+   * sweep or a fat chord from hard-clipping the DAC. Synth only; the tab's
+   * audio never passes through it. */
+  private limiter: DynamicsCompressorNode | null = null
   private settings: SynthSettings = DEFAULT_SYNTH
 
   /** Notes physically held down. */
@@ -290,7 +303,16 @@ export class Synth {
     this.ctx = ctx
     this.out = ctx.createGain()
     this.out.gain.value = 1
-    this.out.connect(destination)
+    this.limiter = ctx.createDynamicsCompressor()
+    // Limiter settings, not compressor settings: high threshold, hard knee,
+    // maximum ratio, fastest attack. Idle until the mix actually gets hot.
+    this.limiter.threshold.value = -3
+    this.limiter.knee.value = 0
+    this.limiter.ratio.value = 20
+    this.limiter.attack.value = 0.002
+    this.limiter.release.value = 0.1
+    this.out.connect(this.limiter)
+    this.limiter.connect(destination)
   }
 
   setNotesChangedHandler(fn: (() => void) | null) {
@@ -374,12 +396,15 @@ export class Synth {
 
   dispose() {
     this.allNotesOff()
-    try {
-      this.out?.disconnect()
-    } catch {
-      // Already disconnected.
+    for (const node of [this.out, this.limiter]) {
+      try {
+        node?.disconnect()
+      } catch {
+        // Already disconnected.
+      }
     }
     this.out = null
+    this.limiter = null
     this.ctx = null
   }
 

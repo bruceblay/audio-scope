@@ -364,6 +364,17 @@ to the attack peak, or past it and gliding to the cutoff. Past four decay time
 constants the sweep has finished and the glide switches to a fast constant, so a
 knob turn on a settled note is heard at once rather than crawling for seconds.
 
+**Gain staging (fixed 2026-08).** The synth clipped audibly unless the level
+sat near 20%. Three compounding causes: the detuned oscillator pair summed to
+2.0 FS (native oscillators are full scale), a resonant lowpass at Q=6 adds
+~15 dB around cutoff and the filter envelope sweeps that peak through the
+loudest harmonics on every attack, and chords stack voices linearly with
+nothing bounding the sum before the DAC hard-clips. Fix: the pair mixes at
+half gain per oscillator, and the synth's own output runs through a brickwall
+limiter (threshold -3 dB, hard knee, ratio 20:1, 2 ms attack) - what every
+synth does about unbounded resonance and polyphony. The limiter touches only
+the synth; tab audio never passes through it.
+
 The related bug is worth remembering: the arpeggiator restarted its interval timer
 on *every* settings update. A knob drag patches settings dozens of times a second
 against a 125 ms step, so the timer was cleared before it could ever fire and the
