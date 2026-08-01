@@ -43,6 +43,18 @@
   padding: 0;
 }
 
+/* No focus rings, custom or native, anywhere in the panel. An instrument's
+   front panel does not draw boxes around the control you last touched; state
+   lives in the controls themselves. Removed deliberately - the native ring was
+   showing on the range sliders and on the piano keys after keyboard play. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+}
+
 html,
 body,
 #root {
@@ -148,11 +160,6 @@ body {
   background: var(--live);
 }
 
-.tab:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -3px;
-}
-
 /* Circular bordered glyph button, the shape browser-fx uses in its title bar. */
 .info-btn {
   flex: none;
@@ -174,11 +181,6 @@ body {
 .info-btn:hover {
   color: rgba(255, 255, 255, 0.95);
   border-color: rgba(255, 255, 255, 0.5);
-}
-
-.info-btn:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: 2px;
 }
 
 /* ----------------------------------------------------------------- about -- */
@@ -399,11 +401,6 @@ body {
   color: var(--text);
 }
 
-.rail-handle:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -2px;
-}
-
 /* ------------------------------------------------------------ controls -- */
 
 .controls {
@@ -483,11 +480,6 @@ body {
   cursor: default;
 }
 
-.stepper button:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -2px;
-}
-
 .stepper-value {
   min-width: 72px;
   padding: 5px 6px;
@@ -539,11 +531,6 @@ body {
   box-shadow: inset 0 -2px 0 var(--live);
 }
 
-.segmented button:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -2px;
-}
-
 .slider {
   -webkit-appearance: none;
   appearance: none;
@@ -574,12 +561,6 @@ body {
     0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
-.slider:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
 /* --------------------------------------------------------------- knobs -- */
 
 /* Knobs pack several to a row, which is the point of using them: a synth has a
@@ -602,12 +583,6 @@ body {
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
-}
-
-.knob-dial:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -2px;
-  border-radius: 50%;
 }
 
 .knob-track {
@@ -1101,11 +1076,6 @@ body {
   filter: brightness(0.92);
 }
 
-.btn:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: 2px;
-}
-
 .btn[data-variant='primary'] {
   color: #08120c;
   background: linear-gradient(#4ee694, #2fc271);
@@ -1134,11 +1104,6 @@ body {
 .icon-btn:hover {
   color: var(--text);
   background: var(--control);
-}
-
-.icon-btn:focus-visible {
-  outline: 2px solid var(--live);
-  outline-offset: -2px;
 }
 
 /* ---------------------------------------------------------- scrollbar -- */
