@@ -375,15 +375,26 @@ limiter (threshold -3 dB, hard knee, ratio 20:1, 2 ms attack) - what every
 synth does about unbounded resonance and polyphony. The limiter touches only
 the synth; tab audio never passes through it.
 
-**Effects (2026-08).** A feedback delay and a simple convolver reverb, both
-ported verbatim from browser-fx's shipped implementations (createDelay and
-createReverb in offscreen-effects.js) rather than designed fresh. They sit in
-the synth's private chain ahead of the limiter - tab audio never passes
-through them - and mix-at-zero is the off state: no toggles, dry by default,
-because a probe with reverb baked in would smear the waveforms it exists to
-show. The reverb's impulse is generated noise with browser-fx's size-to-decay
-exponent mapping; rebuilding it allocates seconds of stereo noise, so
-rebuilds debounce until the knob settles.
+**Effects (2026-08).** A feedback delay ported verbatim from browser-fx's
+shipped createDelay, and a Schroeder reverb (four damped parallel combs into
+two series allpasses, all DelayNodes and gains). They sit in the synth's
+private chain ahead of the limiter - tab audio never passes through them -
+and mix-at-zero is the off state: no toggles, dry by default, because a probe
+with reverb baked in would smear the waveforms it exists to show.
+
+The reverb was first ported from browser-fx's convolver design and had to be
+replaced: with a ConvolverNode in the chain, every oscillator waveform played
+and displayed as a sine. The offline bisect that convicted it is worth
+remembering as method - stub the suspect, measure the rest. With the
+convolver stubbed, a sawtooth kept its textbook -6/-9.5/-12/-13.9 dB
+harmonic ladder through voices, mix, filter, delay and limiter, proving every
+line of our code transparent; separately, this Chrome build's ConvolverNode
+wedged an offline graph outright in exactly the parallel wet/dry topology a
+reverb needs (inline it rendered fine). browser-fx runs its convolver in an
+offscreen document and does not hit this. The Schroeder network needs no
+convolver, and its Decay knob is literal RT60 (comb feedback
+g = 10^(-3d/RT60)) rather than a noise-buffer exponent - more honest as well
+as safe.
 
 The related bug is worth remembering: the arpeggiator restarted its interval timer
 on *every* settings update. A knob drag patches settings dozens of times a second
