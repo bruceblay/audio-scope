@@ -217,6 +217,11 @@ export const FACTORY_PRESETS: Preset[] = [
       slope: 3,
       averaging: 0.35,
       peakHold: true,
+      // 341 ms, chosen by eye. Also the honest choice: the low third-octave
+      // bands are only a few hertz wide, so the 43 ms default cannot give the
+      // bottom bars independent measurements - they read from shared bins and
+      // move in lockstep. ~3 Hz resolution makes each bar a real meter.
+      fftSize: 16384,
     },
   },
 ]
