@@ -30,10 +30,7 @@
      right family for the instrument: Tektronix panels of the 2236's era use a
      neo-grotesque. (1960s Tek panels were Futura - swap the first entry for
      'Futura' to get that earlier, geometric character.) */
-  /* Futura: what 1960s Tektronix panels were actually lettered in, so the
-     geometric character is period-honest. Helvetica stays as the fallback and
-     is what non-macOS users see - these are system faces, no downloads. */
-  --font-ui: Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-ui: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   --fast: 110ms cubic-bezier(0.2, 0, 0.2, 1);
@@ -84,10 +81,9 @@ body {
    it is the tell of a generic dashboard. Nearly zero tracking, one step lighter,
    one step larger. Helvetica caps hold up small; they do not need help. */
 .legend {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.005em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--legend);
 }
 
@@ -133,10 +129,9 @@ body {
   background: transparent;
   color: var(--faint);
   font: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   cursor: pointer;
   position: relative;
   transition: color var(--fast);
@@ -196,10 +191,9 @@ body {
      view is showing. Uppercase and the same size, weight, tracking and colour as
      a selected tab; only the left alignment differs, because it labels the view
      rather than offering a choice between two. */
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--text);
   user-select: none;
 }
@@ -431,9 +425,9 @@ body {
    legends do not. Smaller and bolder so the hierarchy is weight, not size. */
 .group-title {
   margin-bottom: 9px;
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.075em;
+  letter-spacing: 0.01em;
   color: var(--faint);
 }
 
@@ -511,10 +505,9 @@ body {
   background: transparent;
   color: var(--faint);
   font: inherit;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   padding: 6px 9px;
   cursor: pointer;
   transition: background var(--fast), color var(--fast);
@@ -616,10 +609,9 @@ body {
 
 .knob-label,
 .cell-label {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--legend);
 }
 
@@ -687,10 +679,9 @@ body {
 .bank-cap {
   display: block;
   margin-bottom: 4px;
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--faint);
 }
 
@@ -900,10 +891,9 @@ body {
 
 .preset-section {
   padding: 6px 10px 3px;
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.075em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--faint);
   user-select: none;
 }
@@ -1058,10 +1048,9 @@ body {
   border-radius: 3px;
   padding: 6px 11px;
   font: inherit;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--text);
   background: linear-gradient(var(--raised), var(--control));
   box-shadow:

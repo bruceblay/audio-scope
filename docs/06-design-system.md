@@ -26,15 +26,22 @@ holds without shipping woff2 subsets.
 
 | Role | Face | Usage |
 | --- | --- | --- |
-| **Legends** | Futura, falling back to Helvetica Neue / Arial | Uppercase, 11 px, weight 500, `letter-spacing: 0.005em`. |
-| **Section names** | same | Uppercase, 9.5 px, weight 700, `letter-spacing: 0.075em`. |
+| **Legends** | Helvetica Neue / Helvetica / Arial | Mixed case, 11.5 px, weight 500, zero tracking. |
+| **Section names** | same | Mixed case, 10.5 px, weight 700, `letter-spacing: 0.01em`. |
 
-Futura is on trial (2026-08) over the earlier Helvetica - the face 1960s Tek
-panels were actually lettered in, so the geometric character is period-honest
-rather than styled. DIN Alternate was tried first and rejected by eye. Futura
-is a macOS system face, so the Helvetica stack remains as the fallback and is
-what Windows and Linux users see; the zero-outbound-requests rule holds either
-way.
+**Mixed case, not caps (2026-08).** The uppercase silkscreen convention was
+tried three ways - Helvetica, DIN Alternate, Futura - and the verdict was that
+no typeface fixed it, because the coldness was the caps themselves. Labels are
+now written case: "Channel", "Cutoff", "Attack". Genuine acronyms (CRT, L+R,
+X-Y) stay caps because they are spelled that way, the piano keycaps stay
+uppercase because they name physical keys, and the About headings keep
+browser-fx's lowercase. Sizes rose half a pixel across the board since mixed
+case reads smaller than caps at equal size, and the wide tracking went with
+the caps - lowercase tracked wide falls apart.
+
+This softens the instrument-silkscreen conceit deliberately: the panel speaks
+like a product, and the instrument character now lives in the layout, the
+seams, the knobs and the screens rather than in the lettering.
 | **Readouts** | system mono (SF Mono / Menlo / Consolas) | `font-variant-numeric: tabular-nums`. Non-negotiable: a value that reflows as digits change looks broken. |
 
 ### Two mistakes worth not repeating
