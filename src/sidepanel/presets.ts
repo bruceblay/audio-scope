@@ -63,6 +63,34 @@ export const presetSignature = (
 export const FACTORY_PRESETS: Preset[] = [
   {
     // Tuned by eye in the panel and exported as JSON; values are verbatim.
+    id: 'factory_bench',
+    name: 'Bench Classic',
+    mode: 'scope',
+    scope: {
+      channel: 'sum',
+      bandwidth: 0,
+      timePerDiv: 0.001,
+      voltsPerDiv: 0.2,
+      positionY: 0,
+      positionX: 0.5,
+      triggerMode: 'auto',
+      triggerSlope: 'rising',
+      triggerAuto: true,
+      triggerLevel: 0,
+      hysteresis: 0.04,
+      xyExposure: 1024,
+      xySmoothing: 0.15,
+      beamFocus: 0.55,
+      phosphor: 'p31',
+      halation: 0.4,
+      persistence: 0.15,
+      intensity: 0.7,
+      graticuleBrightness: 1,
+    },
+    analyzer: {},
+  },
+  {
+    // Tuned by eye in the panel and exported as JSON; values are verbatim.
     id: 'factory_oscilloscope_music',
     name: 'Oscilloscope Music',
     mode: 'scope',
@@ -103,22 +131,6 @@ export const FACTORY_PRESETS: Preset[] = [
       halation: 0.9,
       beamFocus: 0.45,
       intensity: 0.75,
-    },
-    analyzer: {},
-  },
-  {
-    // A bench scope as it comes: triggered sweep, 1 ms/div, green phosphor.
-    id: 'factory_bench',
-    name: 'Bench Classic',
-    mode: 'scope',
-    scope: {
-      channel: 'sum',
-      timePerDiv: 1e-3,
-      voltsPerDiv: 0.1,
-      triggerMode: 'auto',
-      phosphor: 'p31',
-      persistence: 0.15,
-      halation: 0.4,
     },
     analyzer: {},
   },
