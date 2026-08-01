@@ -76,7 +76,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           </li>
           <li>
             <strong>Style</strong> switches the display discipline: CRT is the beam and
-            phosphor; TUI draws the same trace as a terminal would: a dotted character
+            phosphor; Text draws the same trace as a terminal would: a dotted character
             grid with a lazy refresh.
           </li>
           <li>
@@ -109,7 +109,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             balance against.
           </li>
           <li>
-            <strong>Style</strong> works here too: TUI redraws the curve as dots, the bars
+            <strong>Style</strong> works here too: Text redraws the curve as dots, the bars
             as blocks, and the waterfall as a dithered character grid.
           </li>
           <li>

@@ -114,13 +114,13 @@ export function AnalyzerPanel({
         {/* Same two disciplines as the scope: the continuous instrument, or
             the character grid. One switch for both analyzer views. */}
         <Row label="Style">
-          <Segmented<'crt' | 'tui'>
+          <Segmented<'crt' | 'text'>
             label="Display style"
             value={settings.displayStyle}
             onChange={(displayStyle) => patch({ displayStyle })}
             options={[
               { value: 'crt', label: 'CRT' },
-              { value: 'tui', label: 'TUI' },
+              { value: 'text', label: 'Text' },
             ]}
           />
         </Row>

@@ -180,7 +180,7 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
       this.tuiSgramKey = ''
       this.sgramKey = ''
     }
-    if (s.displayStyle === 'tui') {
+    if (s.displayStyle === 'text') {
       this.renderTui(frame, s, skin)
       return
     }
