@@ -30,7 +30,10 @@
      right family for the instrument: Tektronix panels of the 2236's era use a
      neo-grotesque. (1960s Tek panels were Futura - swap the first entry for
      'Futura' to get that earlier, geometric character.) */
-  --font-ui: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  /* DIN Alternate: condensed industrial gauge lettering, trying it against
+     the Helvetica it replaced (which stays as the fallback and is what
+     non-macOS users see - these are system faces, no downloads). */
+  --font-ui: 'DIN Alternate', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   --fast: 110ms cubic-bezier(0.2, 0, 0.2, 1);

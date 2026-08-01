@@ -26,8 +26,15 @@ holds without shipping woff2 subsets.
 
 | Role | Face | Usage |
 | --- | --- | --- |
-| **Legends** | Helvetica Neue / Helvetica / Arial | Uppercase, 11 px, weight 500, `letter-spacing: 0.005em`. |
+| **Legends** | DIN Alternate, falling back to Helvetica Neue / Arial | Uppercase, 11 px, weight 500, `letter-spacing: 0.005em`. |
 | **Section names** | same | Uppercase, 9.5 px, weight 700, `letter-spacing: 0.075em`. |
+
+DIN Alternate is on trial (2026-08) over the earlier Helvetica: condensed
+industrial gauge lettering, which fits knob captions and buys row width. It is
+a macOS system face, so the Helvetica stack remains as the fallback and is
+what Windows and Linux users see - the zero-outbound-requests rule holds
+either way. Futura (the 1960s Tek face, see below) is the queued alternative
+if DIN does not hold up in use.
 | **Readouts** | system mono (SF Mono / Menlo / Consolas) | `font-variant-numeric: tabular-nums`. Non-negotiable: a value that reflows as digits change looks broken. |
 
 ### Two mistakes worth not repeating
