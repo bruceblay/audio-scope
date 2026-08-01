@@ -295,5 +295,68 @@ console.log('\n--- TRIGGER: DC-offset signal (auto level must follow) ---')
   }
 }
 
+// --- TUI cell lattice ------------------------------------------------------
+{
+  const { CellGrid } = await import('../src/modes/scope/tui')
+  console.log('\n--- TUI: the lattice is a real quantization ---')
+
+  const g = new CellGrid()
+  g.resize(700, 420, 1)
+  check(
+    'cells approximate a terminal grid',
+    g.cols === 100 && g.rows === 30 && g.gw === 200 && g.gh === 120,
+    `${g.cols}x${g.rows} cells, ${g.gw}x${g.gh} sub-dots`,
+  )
+
+  // A horizontal segment across the top row deposits only into that band.
+  g.depositLine(0, 3, 699, 3, 1)
+  const e = (g as unknown as { energy: Float32Array }).energy
+  let inBand = 0
+  let outOfBand = 0
+  for (let gy = 0; gy < g.gh; gy++) {
+    for (let gx = 0; gx < g.gw; gx++) {
+      const v = e[gx + gy * g.gw]
+      if (v <= 0) continue
+      if (gy === 0) inBand++
+      else outOfBand++
+    }
+  }
+  check(
+    'a segment lands only where it travels',
+    inBand > 0 && outOfBand === 0,
+    `${inBand} sub-dots in the travelled band, ${outOfBand} strays`,
+  )
+
+  // Deposited energy is the segment's gain regardless of length, which is the
+  // dwell-brightness rule: same time, same energy, spread thinner when moving
+  // fast.
+  const g2 = new CellGrid()
+  g2.resize(700, 420, 1)
+  g2.depositLine(0, 100, 20, 100, 1)
+  g2.depositLine(0, 300, 690, 300, 1)
+  const e2 = (g2 as unknown as { energy: Float32Array }).energy
+  let short = 0
+  let long = 0
+  for (let gy = 0; gy < g2.gh; gy++) {
+    for (let gx = 0; gx < g2.gw; gx++) {
+      const v = e2[gx + gy * g2.gw]
+      if (gy < g2.gh / 2) short += v
+      else long += v
+    }
+  }
+  check(
+    'equal time deposits equal energy at any speed',
+    Math.abs(short - long) / long < 0.1,
+    `short ${short.toFixed(3)} vs long ${long.toFixed(3)}`,
+  )
+
+  // Decay flushes to true zero rather than lingering forever.
+  g2.decay(0.001)
+  g2.decay(0.001)
+  let residue = 0
+  for (let i = 0; i < e2.length; i++) residue += e2[i]
+  check('decay reaches actual zero', residue === 0, 'no immortal ghost energy')
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`)
 process.exit(failures === 0 ? 0 : 1)

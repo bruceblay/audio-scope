@@ -239,6 +239,37 @@ single soft ribbon, at 1.0 it is fully fused.
 Default is 0.8: the fused ribbon is the intended look (chosen by eye on real
 material). Zero restores the forever-crisp stacking exactly.
 
+## TUI display style
+
+The scope has two display disciplines, switched in the Display section: the
+CRT below, and **TUI** - the same trace drawn the way a terminal draws it
+(`src/modes/scope/tui.ts`). Not a retro filter over the CRT image: a second
+set of real constraints, which is where the look comes from.
+
+- **Geometry quantizes to a character-cell lattice**, ~7x14 px cells refined
+  by 2x4 sub-dots per cell - the Braille trick every terminal plotter uses.
+  Trace segments rasterize into the lattice; lit sub-dots draw as square dots.
+- **Brightness quantizes to four levels.** A terminal cell has one colour, so
+  the cell takes one level (from its brightest sub-dot, normalized against a
+  slow-falling running maximum) and its sub-dots simply exist or do not.
+- **The screen refreshes at ~18 Hz**, not the display's frame rate. Between
+  ticks the canvas keeps its pixels, exactly as a terminal would. The slight
+  choppiness is part of the discipline, not a performance artifact.
+- **Dwell physics carries over at lattice resolution.** Every segment spans
+  the same slice of time, so every segment deposits the same energy, spread
+  over the sub-dots it crosses - slow beam travel makes bright cells the same
+  way it makes bright phosphor. The test suite checks this equality; writing
+  the test caught an endpoint over-deposit that made short segments up to 2x
+  too bright.
+- **Persistence decays in steps**, one multiplicative fade per tick with a
+  flush to true zero. Focus and halation do not apply - there is no beam width
+  and no phosphor image to diffuse - and their controls hide in TUI style.
+- The graticule becomes dotted rules, one dot per cell: terminal box
+  furniture rather than etched glass.
+
+Everything upstream is shared with the CRT path: trigger, sweep, X-Y
+projection, BW limit, smoothing, and all measurements.
+
 ## CRT rendering
 
 The look is not a filter over a line chart. It is a model of what an analog scope

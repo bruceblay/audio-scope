@@ -5,6 +5,14 @@ export type TriggerSlope = 'rising' | 'falling' | 'either'
 export type Channel = 'left' | 'right' | 'sum' | 'xy'
 
 /**
+ * How the trace is painted. 'crt' is the beam-and-phosphor model; 'tui' draws
+ * the same signal as a terminal would - a character-cell lattice with
+ * quantized brightness and a ~18 Hz refresh. Two display disciplines, one
+ * instrument; everything upstream of the paint is shared.
+ */
+export type DisplayStyle = 'crt' | 'tui'
+
+/**
  * 1-2-5 sequences, as on a real front panel. Values above ~8.5ms/div exceed the
  * 4096-sample record at 48 kHz and are gated in the UI until the AudioWorklet
  * ring buffer lands (docs/03-audio-engine.md).
@@ -80,6 +88,7 @@ export interface ScopeSettings {
    */
   beamFocus: number
 
+  displayStyle: DisplayStyle
   phosphor: PhosphorId
   /** Phosphor decay time constant in seconds. */
   persistence: number
@@ -123,6 +132,7 @@ export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
   xySmoothing: 0.15,
   beamFocus: 0.55,
 
+  displayStyle: 'crt',
   phosphor: 'p31',
   // 0.8 by default: the fused analog ribbon is the intended look, and the
   // slider still reaches razor-sharp stacking at zero.

@@ -19,6 +19,7 @@ import {
   type ScopeSettings,
 } from './settings'
 import { bandlimit, bwKernel } from './bandwidth'
+import { CellGrid, TUI_TICK, TUI_LEVELS } from './tui'
 import { Trigger } from './trigger'
 
 /** Alpha quantization levels. Segments are grouped by level so each level strokes once. */
@@ -49,6 +50,14 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   private persistCtx: CanvasRenderingContext2D | null = null
   private blurTmp: HTMLCanvasElement | null = null
   private blurTmpCtx: CanvasRenderingContext2D | null = null
+
+  // --- TUI display state --------------------------------------------------
+  private tui = new CellGrid()
+  private tuiDebt = 0
+  /** Repaint needed outside the tick, e.g. after a resize or style switch. */
+  private tuiDirty = true
+  private lastStyle: ScopeSettings['displayStyle'] = 'crt'
+  private tuiPalette: string[] = []
 
   /** Graticule is static, so it is drawn once and blitted. */
   private grat: HTMLCanvasElement | null = null
@@ -129,6 +138,9 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
 
     this.grat = null
     this.gratKey = ''
+
+    this.tui.resize(width, height, dpr)
+    this.tuiDirty = true
   }
 
   /** One diffusion step: persist -> tmp, then tmp -> persist through a blur. */
@@ -151,6 +163,20 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
 
     this.ensureColors(s)
     const skin = screenTheme[theme]
+
+    // Switching display styles clears the other style's accumulated image, so
+    // stale trace cannot ghost through the swap.
+    if (s.displayStyle !== this.lastStyle) {
+      this.lastStyle = s.displayStyle
+      this.tui.clear()
+      this.tuiDebt = 0
+      this.tuiDirty = true
+      this.persistCtx?.clearRect(0, 0, this.w, this.h)
+    }
+    if (s.displayStyle === 'tui') {
+      this.renderTui(frame, s, theme)
+      return
+    }
 
     // --- Phosphor decay ---------------------------------------------------
     // 'destination-out' multiplies existing alpha by (1 - d) rather than
@@ -241,6 +267,84 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     if (!dst || dst.length !== src.length) dst = this.bwBufs[slot] = new Float32Array(src.length)
     bandlimit(src, dst, this.bwK)
     return dst
+  }
+
+  // ------------------------------------------------------------------------
+  // TUI paint
+  // ------------------------------------------------------------------------
+
+  /**
+   * The terminal path. Builds the exact same trace the CRT would draw, then
+   * deposits it into the cell lattice and paints glyph dots - at the TUI tick
+   * rate, not the display's. Between ticks the canvas simply keeps its pixels,
+   * which is what a terminal does too.
+   */
+  private renderTui(frame: AudioFrame, s: ScopeSettings, theme: ThemeId) {
+    this.tuiDebt += frame.dt
+    const tick = this.tuiDebt >= TUI_TICK
+    if (!tick && !this.tuiDirty) return
+    this.tuiDirty = false
+
+    if (tick) {
+      // One decay step per tick, so persistence fades in terminal steps.
+      this.tuiDebt = Math.min(this.tuiDebt - TUI_TICK, TUI_TICK)
+      if (s.channel === 'xy') this.buildXY(frame, s)
+      else this.buildSweep(frame, s)
+
+      this.tui.decay(s.persistence <= 0 ? 0 : Math.exp(-TUI_TICK / s.persistence))
+      const n = this.pointCount
+      if (n >= 2) {
+        // Every segment spans the same slice of time, so every segment
+        // deposits the same energy - dwell brightness, as on the beam.
+        const gain = s.intensity / n
+        for (let i = 0; i < n - 1; i++) {
+          this.tui.depositLine(this.xs[i], this.ys[i], this.xs[i + 1], this.ys[i + 1], gain)
+        }
+      }
+    }
+
+    const skin = screenTheme[theme]
+    const c = this.ctx
+    c.globalCompositeOperation = 'source-over'
+    c.fillStyle = skin.screen
+    c.fillRect(0, 0, this.w, this.h)
+    this.drawTuiGraticule(s, theme)
+    this.tui.draw(c, this.tuiPalette)
+  }
+
+  /**
+   * Dotted rules, the way a terminal draws box furniture: centre cross and
+   * frame as one dot per cell, nothing continuous.
+   */
+  private drawTuiGraticule(s: ScopeSettings, theme: ThemeId) {
+    const skin = screenTheme[theme]
+    const c = this.ctx
+    const alpha = clamp(s.graticuleBrightness, 0, 2)
+    if (alpha <= 0) return
+    const { cols, rows, cellW, cellH } = this.tui
+    const dot = Math.max(1, Math.round(this.dpr))
+    c.globalAlpha = Math.min(1, alpha)
+    c.fillStyle = skin.graticuleMajor
+
+    const midCol = Math.floor(cols / 2)
+    const midRow = Math.floor(rows / 2)
+    for (let cy = 0; cy < rows; cy++) {
+      c.fillRect(midCol * cellW + cellW / 2, cy * cellH + cellH / 2, dot, dot)
+    }
+    for (let cx = 0; cx < cols; cx++) {
+      c.fillRect(cx * cellW + cellW / 2, midRow * cellH + cellH / 2, dot, dot)
+    }
+    // Frame dots, sparser: every other cell.
+    c.fillStyle = skin.graticule
+    for (let cx = 0; cx < cols; cx += 2) {
+      c.fillRect(cx * cellW + cellW / 2, cellH / 2, dot, dot)
+      c.fillRect(cx * cellW + cellW / 2, (rows - 1) * cellH + cellH / 2, dot, dot)
+    }
+    for (let cy = 0; cy < rows; cy += 2) {
+      c.fillRect(cellW / 2, cy * cellH + cellH / 2, dot, dot)
+      c.fillRect((cols - 1) * cellW + cellW / 2, cy * cellH + cellH / 2, dot, dot)
+    }
+    c.globalAlpha = 1
   }
 
   // ------------------------------------------------------------------------
@@ -489,6 +593,18 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       const g = Math.round(rgb[1] + (bloom[1] - rgb[1]) * t)
       const bl = Math.round(rgb[2] + (bloom[2] - rgb[2]) * t)
       this.colors.push(`rgb(${r},${g},${bl})`)
+    }
+
+    // TUI brightness levels: dim trace in the pure phosphor colour, brightest
+    // level pulled toward bloom - the same saturation story, four steps.
+    this.tuiPalette = ['']
+    for (let l = 1; l < TUI_LEVELS; l++) {
+      const t = ((l - 1) / (TUI_LEVELS - 2)) * 0.65
+      const r = Math.round(rgb[0] + (bloom[0] - rgb[0]) * t)
+      const g = Math.round(rgb[1] + (bloom[1] - rgb[1]) * t)
+      const bl = Math.round(rgb[2] + (bloom[2] - rgb[2]) * t)
+      const a = 0.45 + (l - 1) * 0.275
+      this.tuiPalette.push(`rgba(${r},${g},${bl},${a.toFixed(3)})`)
     }
   }
 

@@ -1,5 +1,6 @@
 import { formatHz, formatSeconds } from '../lib/dsp'
 import {
+  type DisplayStyle,
   TIME_PER_DIV,
   VOLTS_PER_DIV,
   XY_EXPOSURE,
@@ -56,6 +57,7 @@ export function ScopePanel({
   settings: ScopeSettings
   patch: (next: Partial<ScopeSettings>) => void
 }) {
+  const isTui = settings.displayStyle === 'tui'
   const isXY = settings.channel === 'xy'
   return (
     <>
@@ -222,6 +224,19 @@ export function ScopePanel({
       )}
 
       <Group title="Display">
+        {/* Two display disciplines, one instrument: the beam-and-phosphor CRT,
+            or the same trace drawn the way a terminal draws it. */}
+        <Row label="Style">
+          <Segmented<DisplayStyle>
+            label="Display style"
+            value={settings.displayStyle}
+            onChange={(displayStyle) => patch({ displayStyle })}
+            options={[
+              { value: 'crt', label: 'CRT' },
+              { value: 'tui', label: 'TUI' },
+            ]}
+          />
+        </Row>
         <Row label="Phosphor">
           <Segmented<PhosphorId>
             label="Phosphor"
@@ -244,6 +259,10 @@ export function ScopePanel({
           />
         </Row>
         {/* FOCUS on a real front panel. Higher is a tighter spot. */}
+        {/* Beam optics: CRT-only. The lattice has no beam to focus and no
+            phosphor image to diffuse. */}
+        {!isTui && (
+          <>
         <Row label="Focus">
           <Slider
             label="Focus"
@@ -267,6 +286,8 @@ export function ScopePanel({
             onChange={(halation) => patch({ halation })}
           />
         </Row>
+          </>
+        )}
         <Row label="Intensity">
           <Slider
             label="Intensity"

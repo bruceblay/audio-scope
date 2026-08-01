@@ -75,6 +75,11 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             tighter and more immediate; persistence supplies the tail.
           </li>
           <li>
+            <strong>Style</strong> switches the display discipline: CRT is the beam and
+            phosphor; TUI draws the same trace as a terminal would: a dotted character
+            grid with a lazy refresh.
+          </li>
+          <li>
             <strong>BW limit</strong> is the bench scope's noise button: a lowpass on the
             vertical channel, in hertz. It removes fuzz within the trace and steadies the
             trigger.
