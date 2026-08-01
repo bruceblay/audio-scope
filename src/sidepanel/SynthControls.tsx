@@ -223,21 +223,6 @@ export function SynthPanel({
             />
           </Bank>
 
-          {/* Output volume is not an oscillator parameter; it closes the audio
-              chain: osc, filter, envelope, out. */}
-          <Bank name="Out">
-            <Knob
-              label="Level"
-              value={settings.level}
-              min={0}
-              max={1}
-              step={0.01}
-              reset={0.5}
-              format={(v) => `${Math.round(v * 100)}%`}
-              onChange={(level) => patch({ level })}
-            />
-          </Bank>
-
           {/* Effects close the audio chain after Out, ported from browser-fx.
               No toggles: mix at zero is off, which keeps the panel minimal and
               the synth dry by default - it is test equipment first. */}
@@ -304,6 +289,22 @@ export function SynthPanel({
               reset={0}
               format={(v) => `${Math.round(v * 100)}%`}
               onChange={(reverbMix) => patch({ reverbMix })}
+            />
+          </Bank>
+
+          {/* Output closes the audio chain for real now: osc, filter,
+              envelope, delay, reverb, out. It sat before the effects when
+              there were no effects to sit before. */}
+          <Bank name="Out">
+            <Knob
+              label="Level"
+              value={settings.level}
+              min={0}
+              max={1}
+              step={0.01}
+              reset={0.5}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(level) => patch({ level })}
             />
           </Bank>
 
