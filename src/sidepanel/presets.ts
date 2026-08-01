@@ -115,6 +115,8 @@ export const FACTORY_PRESETS: Preset[] = [
       intensity: 1.1,
       graticuleBrightness: 0.4,
     },
+    analyzer: {},
+  },
   {
     // Tuned by eye in the panel and exported as JSON; values are verbatim.
     id: 'factory_spectrogram_art',
@@ -138,7 +140,6 @@ export const FACTORY_PRESETS: Preset[] = [
       map: 'magma',
       scrollRate: 60,
     },
-    analyzer: {},
   },
   {
     // The stereo-field monitor: what mastering engineers keep in the corner.
@@ -184,7 +185,6 @@ export const FACTORY_PRESETS: Preset[] = [
       graticuleBrightness: 1,
     },
     analyzer: {},
-  },
   },
   {
     // Judging tonal balance: pink-noise tilt, heavy averaging, gentle
