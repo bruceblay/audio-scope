@@ -62,19 +62,28 @@ export const presetSignature = (
 
 export const FACTORY_PRESETS: Preset[] = [
   {
-    // The reason X-Y mode exists. Long exposure and low halation because drawn
-    // images are composed of precise lines; persistence carries the figure.
+    // Tuned by eye in the panel and exported as JSON; values are verbatim.
     id: 'factory_oscilloscope_music',
     name: 'Oscilloscope Music',
     mode: 'scope',
     scope: {
       channel: 'xy',
-      voltsPerDiv: 0.2,
+      bandwidth: 0,
+      timePerDiv: 0.001,
+      voltsPerDiv: 0.1,
+      positionY: 0,
+      positionX: 0.5,
+      triggerMode: 'auto',
+      triggerSlope: 'rising',
+      triggerAuto: true,
+      triggerLevel: 0,
+      hysteresis: 0.04,
       xyExposure: 2048,
-      xySmoothing: 0.1,
-      persistence: 0.3,
-      halation: 0.2,
+      xySmoothing: 0.05,
       beamFocus: 0.75,
+      phosphor: 'p31',
+      halation: 0.35,
+      persistence: 0.3,
       intensity: 1.1,
       graticuleBrightness: 0.4,
     },
