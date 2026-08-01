@@ -135,19 +135,30 @@ export const FACTORY_PRESETS: Preset[] = [
     analyzer: {},
   },
   {
-    // Slow sweep on the long-persistence blue phosphor, like a storage scope
-    // watching a signal breathe.
+    // Tuned by eye in the panel and exported as JSON; values are verbatim.
     id: 'factory_storage_tube',
     name: 'Storage Tube',
     mode: 'scope',
     scope: {
       channel: 'sum',
+      bandwidth: 0,
       timePerDiv: 0.01,
       voltsPerDiv: 0.2,
+      positionY: 0,
+      positionX: 0.5,
+      triggerMode: 'auto',
+      triggerSlope: 'rising',
+      triggerAuto: true,
+      triggerLevel: 0,
+      hysteresis: 0.04,
+      xyExposure: 1024,
+      xySmoothing: 0.15,
+      beamFocus: 0.25,
       phosphor: 'p7',
+      halation: 0.2,
       persistence: 1.5,
-      halation: 0.9,
       intensity: 0.7,
+      graticuleBrightness: 1,
     },
     analyzer: {},
   },
