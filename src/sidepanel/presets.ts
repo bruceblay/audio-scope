@@ -131,21 +131,27 @@ export const FACTORY_PRESETS: Preset[] = [
     analyzer: {},
   },
   {
-    // For music that draws pictures in the spectrogram. Long window for
-    // vertical detail, slow scroll so the image has room to form.
+    // Tuned by eye in the panel and exported as JSON; values are verbatim.
     id: 'factory_spectrogram_art',
     name: 'Spectrogram Art',
     mode: 'analyzer',
     scope: {},
     analyzer: {
       view: 'spectrogram',
-      map: 'magma',
-      fftSize: 8192,
-      scrollRate: 30,
       minHz: 20,
       maxHz: 20000,
       floorDb: -90,
       ceilDb: -18,
+      slope: 0,
+      averaging: 0.4,
+      peakHold: true,
+      peakDecay: 24,
+      bars: false,
+      bandsPerOctave: 3,
+      smoothOctave: 12,
+      fftSize: 2048,
+      map: 'magma',
+      scrollRate: 60,
     },
   },
   {
