@@ -111,7 +111,9 @@ export const DEFAULT_ANALYZER_SETTINGS: AnalyzerSettings = {
   bars: false,
   bandsPerOctave: 3,
   smoothOctave: 12,
-  fftSize: 2048,
+  // 341 ms. The 43 ms default felt immediate but could not resolve the low
+  // end - narrow bands below ~250 Hz read from shared bins - and it looked it.
+  fftSize: 16384,
   map: 'magma',
   scrollRate: 60,
 }
