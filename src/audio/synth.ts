@@ -14,6 +14,7 @@
  */
 
 import { clamp } from '../lib/dsp'
+import { DelayFx, ReverbFx } from './fx'
 
 export type Waveform = OscillatorType
 export type ArpMode = 'up' | 'down' | 'updown' | 'random'
@@ -36,6 +37,14 @@ export interface SynthSettings {
   sustain: number
   release: number
   level: number
+
+  /** Delay and reverb, mix 0 = off. Ported from browser-fx; see fx.ts. */
+  delayTime: number
+  delayFeedback: number
+  delayMix: number
+  reverbSize: number
+  reverbDecay: number
+  reverbMix: number
 
   arpOn: boolean
   /** Steps per second. */
@@ -62,6 +71,15 @@ export const DEFAULT_SYNTH: SynthSettings = {
   sustain: 0.55,
   release: 0.25,
   level: 0.5,
+
+  // Dry by default: the synth is test equipment first, and a probe with
+  // reverb baked in would smear the very waveforms it exists to show.
+  delayTime: 0.25,
+  delayFeedback: 0.3,
+  delayMix: 0,
+  reverbSize: 0.7,
+  reverbDecay: 2,
+  reverbMix: 0,
 
   arpOn: false,
   arpRate: 8,
@@ -278,6 +296,8 @@ export class Synth {
    * sweep or a fat chord from hard-clipping the DAC. Synth only; the tab's
    * audio never passes through it. */
   private limiter: DynamicsCompressorNode | null = null
+  private delayFx: DelayFx | null = null
+  private reverbFx: ReverbFx | null = null
   private settings: SynthSettings = DEFAULT_SYNTH
 
   /** Notes physically held down. */
@@ -311,8 +331,20 @@ export class Synth {
     this.limiter.ratio.value = 20
     this.limiter.attack.value = 0.002
     this.limiter.release.value = 0.1
-    this.out.connect(this.limiter)
+    // Voices -> delay -> reverb -> limiter. The effects are ahead of the
+    // limiter so a feedback build-up or a long reverb tail cannot clip either.
+    this.delayFx = new DelayFx(ctx)
+    this.reverbFx = new ReverbFx(ctx)
+    this.out.connect(this.delayFx.input)
+    this.delayFx.output.connect(this.reverbFx.input)
+    this.reverbFx.output.connect(this.limiter)
     this.limiter.connect(destination)
+    this.applyFx(this.settings)
+  }
+
+  private applyFx(s: SynthSettings) {
+    this.delayFx?.apply(s.delayTime, s.delayFeedback, s.delayMix)
+    this.reverbFx?.apply(s.reverbSize, s.reverbDecay, s.reverbMix)
   }
 
   setNotesChangedHandler(fn: (() => void) | null) {
@@ -341,6 +373,7 @@ export class Synth {
     if (!next.arpLatch) this.latched.clear()
 
     // Everything else is live on whatever is currently sounding.
+    this.applyFx(next)
     for (const voice of this.voices.values()) voice.applySettings(next)
     this.arpVoice?.applySettings(next)
   }
@@ -396,6 +429,10 @@ export class Synth {
 
   dispose() {
     this.allNotesOff()
+    this.delayFx?.dispose()
+    this.reverbFx?.dispose()
+    this.delayFx = null
+    this.reverbFx = null
     for (const node of [this.out, this.limiter]) {
       try {
         node?.disconnect()

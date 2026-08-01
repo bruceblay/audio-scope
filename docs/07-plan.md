@@ -375,6 +375,16 @@ limiter (threshold -3 dB, hard knee, ratio 20:1, 2 ms attack) - what every
 synth does about unbounded resonance and polyphony. The limiter touches only
 the synth; tab audio never passes through it.
 
+**Effects (2026-08).** A feedback delay and a simple convolver reverb, both
+ported verbatim from browser-fx's shipped implementations (createDelay and
+createReverb in offscreen-effects.js) rather than designed fresh. They sit in
+the synth's private chain ahead of the limiter - tab audio never passes
+through them - and mix-at-zero is the off state: no toggles, dry by default,
+because a probe with reverb baked in would smear the waveforms it exists to
+show. The reverb's impulse is generated noise with browser-fx's size-to-decay
+exponent mapping; rebuilding it allocates seconds of stereo noise, so
+rebuilds debounce until the knob settles.
+
 The related bug is worth remembering: the arpeggiator restarted its interval timer
 on *every* settings update. A knob drag patches settings dozens of times a second
 against a 125 ms step, so the timer was cleared before it could ever fire and the

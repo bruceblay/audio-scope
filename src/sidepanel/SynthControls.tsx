@@ -238,6 +238,75 @@ export function SynthPanel({
             />
           </Bank>
 
+          {/* Effects close the audio chain after Out, ported from browser-fx.
+              No toggles: mix at zero is off, which keeps the panel minimal and
+              the synth dry by default - it is test equipment first. */}
+          <Bank name="Delay">
+            <Knob
+              label="Time"
+              value={settings.delayTime}
+              min={0.05}
+              max={1}
+              step={0.01}
+              reset={0.25}
+              format={(v) => `${Math.round(v * 1000)}ms`}
+              onChange={(delayTime) => patch({ delayTime })}
+            />
+            <Knob
+              label="Fdbk"
+              value={settings.delayFeedback}
+              min={0}
+              max={0.9}
+              step={0.05}
+              reset={0.3}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(delayFeedback) => patch({ delayFeedback })}
+            />
+            <Knob
+              label="Mix"
+              value={settings.delayMix}
+              min={0}
+              max={1}
+              step={0.05}
+              reset={0}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(delayMix) => patch({ delayMix })}
+            />
+          </Bank>
+
+          <Bank name="Reverb">
+            <Knob
+              label="Size"
+              value={settings.reverbSize}
+              min={0}
+              max={1}
+              step={0.05}
+              reset={0.7}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(reverbSize) => patch({ reverbSize })}
+            />
+            <Knob
+              label="Decay"
+              value={settings.reverbDecay}
+              min={0.1}
+              max={8}
+              step={0.1}
+              reset={2}
+              format={(v) => `${v.toFixed(1)}s`}
+              onChange={(reverbDecay) => patch({ reverbDecay })}
+            />
+            <Knob
+              label="Mix"
+              value={settings.reverbMix}
+              min={0}
+              max={1}
+              step={0.05}
+              reset={0}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(reverbMix) => patch({ reverbMix })}
+            />
+          </Bank>
+
           {/* After the audio chain, not inside it. The arpeggiator is a
               performance control, so it sits last - nearest the keyboard it
               drives. Ordering it after Out also means a wrap can never leave

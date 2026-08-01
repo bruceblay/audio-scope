@@ -193,6 +193,16 @@ console.log('\n--- DEFAULTS: sane and quiet on arrival ---')
   check('cutoff is audible', d.cutoff > 200 && d.cutoff < 20000, `${d.cutoff} Hz`)
   check('envelope times are positive', d.attack > 0 && d.release > 0, `A ${d.attack}s R ${d.release}s`)
   check('sustain is a level, not a time', d.sustain >= 0 && d.sustain <= 1, `${d.sustain}`)
+  check(
+    'effects are dry by default',
+    d.delayMix === 0 && d.reverbMix === 0,
+    'test equipment first: reverb would smear the waveforms it exists to show',
+  )
+  check(
+    'delay feedback cannot regenerate forever',
+    d.delayFeedback < 1,
+    `${d.delayFeedback} (unity feedback never fades)`,
+  )
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`)
