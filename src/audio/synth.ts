@@ -344,8 +344,10 @@ export class Synth {
     // innocent.
     this.delayFx = new DelayFx(ctx)
     this.reverbFx = new ReverbFx(ctx)
-    this.out.connect(this.limiter)
-    this.limiter.connect(destination)
+    // BISECT stage 2: the limiter is out of the path as well. The active graph
+    // is now identical to the last-known-good commit except the per-voice 0.5
+    // mix gain, which cannot filter anything.
+    this.out.connect(destination)
     this.applyFx(this.settings)
   }
 
