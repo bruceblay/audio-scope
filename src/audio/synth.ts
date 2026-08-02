@@ -146,13 +146,6 @@ class Voice {
       osc.connect(this.mix)
       osc.start(now)
     }
-    // DIAGNOSTIC (temporary): assigning an invalid string to osc.type is
-    // silently ignored per WebIDL - no error, and the oscillator stays at its
-    // default, which is sine. This line proves or clears that in one look:
-    // asked and got must match.
-    console.debug(
-      `[audio-scope] voice: asked "${s.waveform}" got "${this.oscA.type}" at ${hz.toFixed(1)} Hz`,
-    )
 
     this.filter.connect(this.amp)
     this.amp.connect(destination)
@@ -354,16 +347,14 @@ export class Synth {
     this.limiter.ratio.value = 20
     this.limiter.attack.value = 0.002
     this.limiter.release.value = 0.1
-    // BISECT (temporary): the effects are built but NOT in the signal path -
-    // voices go straight to the limiter - while hunting the all-waveforms-
-    // sound-like-sine report. If the bug survives this bypass, the effects are
-    // innocent.
+    // Voices -> delay -> reverb -> limiter. The effects are ahead of the
+    // limiter so a feedback build-up or a long reverb tail cannot clip either.
     this.delayFx = new DelayFx(ctx)
     this.reverbFx = new ReverbFx(ctx)
-    // BISECT stage 2: the limiter is out of the path as well. The active graph
-    // is now identical to the last-known-good commit except the per-voice 0.5
-    // mix gain, which cannot filter anything.
-    this.out.connect(destination)
+    this.out.connect(this.delayFx.input)
+    this.delayFx.output.connect(this.reverbFx.input)
+    this.reverbFx.output.connect(this.limiter)
+    this.limiter.connect(destination)
     this.applyFx(this.settings)
   }
 
