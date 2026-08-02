@@ -207,8 +207,10 @@ export function App() {
     disconnect()
   }, [disconnect])
 
+  const connectingRef = useRef(false)
   const connect = useCallback(async (explicitTabId?: number) => {
     if (connecting) return
+    connectingRef.current = true
     setError(null)
     setConnecting(true)
     try {
@@ -253,6 +255,7 @@ export function App() {
       }
       disconnect()
     } finally {
+      connectingRef.current = false
       setConnecting(false)
     }
   }, [connecting, disconnect, engine, target])
@@ -353,6 +356,15 @@ export function App() {
       // and then bailing throws away the one thing that makes recovery work.
       if (engine.isAttached) return
       await chrome.storage.session.remove('invocation')
+      if (cancelled) return
+      // The toolbar click that minted this grant also focuses the browser
+      // window, and window focus fires the tab-chase - whose doomed attempt
+      // may still be in flight. Racing into connect() while it is would hit
+      // the re-entrancy guard and silently swallow the one click that can
+      // succeed, with the note already consumed. Wait the chase out first.
+      for (let i = 0; i < 20 && connectingRef.current; i++) {
+        await new Promise((r) => window.setTimeout(r, 50))
+      }
       if (cancelled) return
       void connectRef.current(invocation.tabId)
     }
