@@ -112,7 +112,7 @@ export const FACTORY_PRESETS: Preset[] = [
       phosphor: 'p31',
       halation: 0.35,
       persistence: 0.3,
-      intensity: 1.1,
+      intensity: 2,
       graticuleBrightness: 0.4,
     },
     analyzer: {},
