@@ -95,6 +95,27 @@ ignored so that reopening the panel later never silently starts capturing.
 The acquisition call site stays isolated in `acquireTabStream()` in
 `src/audio/capture.ts`.
 
+
+**Auto-reestablish (2026-08).** Losing the grant was surfacing as an error
+card with raw API text, which reads as a crash to anyone not versed in
+activeTab. Two changes turned it into a designed state:
+
+1. While the user is in capture mode (connected once, and not explicitly
+   disconnected), the panel chases the active tab: on every tab switch it
+   silently attempts a reconnect. When Chrome still holds a grant for that tab
+   the capture simply follows the user - no click, no message. The Disconnect
+   button is what ends capture mode; a stream dying on its own (navigation,
+   closed tab) does not, because those are exactly the moments the chase
+   exists for.
+2. When the attempt fails for lack of a grant, the panel shows one calm
+   instruction - press the toolbar button - with no error styling and no API
+   text (that goes to the console). The existing invocation note then turns
+   the click into a completed reconnect with no further step.
+
+The ceiling is unchanged and worth restating: the activeTab grant only comes
+from a user gesture on the extension, so "fully automatic" is not available
+to any extension. This design reaches that ceiling.
+
 ## Teardown
 
 Capture must end cleanly or the target tab stays silent. Every one of these

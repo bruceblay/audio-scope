@@ -156,7 +156,7 @@ function hintFor(detail: string): string {
     // tabCapture requires an extension *invocation* on this specific tab. The
     // only thing that records one is clicking the toolbar icon while the tab is
     // in front. Host permissions do not substitute; verified.
-    return 'Capture rights expired. Click the Audio Scope icon in your toolbar with this tab in front and it will reconnect automatically.'
+    return 'Chrome needs one click to share this tab: press the Audio Scope button in your toolbar. The panel reconnects on its own.'
   }
   if (/gesture/i.test(detail)) {
     return 'The browser needs a direct click. Click Connect again.'

@@ -47,9 +47,10 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           </li>
         </ol>
         <p className="about-note">
-          If Connect ever says capture rights expired, click the toolbar icon on that tab
-          again — Chrome withdraws them when a tab navigates, and there is no way to renew
-          them from in here. It reconnects on its own.
+          When you move to a new tab, the panel follows and reconnects by itself wherever
+          Chrome allows. When Chrome wants a fresh click first, the panel says so — press
+          the toolbar button and it takes it from there. Chrome withdraws capture rights
+          whenever a tab navigates, and no extension can renew them without that click.
         </p>
 
         <h4>oscilloscope</h4>

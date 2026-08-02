@@ -194,6 +194,19 @@ export function App() {
     chrome.runtime.sendMessage({ type: 'PANEL_STATE', connected: false }).catch(() => {})
   }, [engine])
 
+  /**
+   * Whether the user is in capture mode: set on a successful connect, cleared
+   * only by the Disconnect button. Streams also die on their own - the tab
+   * navigates, the tab closes - and those must NOT clear it, because they are
+   * exactly the moments auto-reconnect exists for.
+   */
+  const wantsCapture = useRef(false)
+
+  const stopCapture = useCallback(() => {
+    wantsCapture.current = false
+    disconnect()
+  }, [disconnect])
+
   const connect = useCallback(async (explicitTabId?: number) => {
     if (connecting) return
     setError(null)
@@ -214,6 +227,7 @@ export function App() {
       }
 
       await engine.attach(stream)
+      wantsCapture.current = true
       setConnected(true)
       chrome.runtime.sendMessage({ type: 'PANEL_STATE', connected: true }).catch(() => {})
     } catch (err) {
@@ -247,12 +261,24 @@ export function App() {
   // While disconnected, follow the active tab so Connect targets whatever you
   // are looking at. Once connected, latch, so browsing elsewhere does not yank
   // the visualization away.
+  const followedTabId = useRef(-1)
   useEffect(() => {
     if (connected) return
     let cancelled = false
     const refresh = () => {
       getActiveTab().then((tab) => {
-        if (!cancelled && tab) setTarget(tab)
+        if (cancelled || !tab) return
+        setTarget(tab)
+        if (tab.id === followedTabId.current) return
+        followedTabId.current = tab.id
+        // A new tab makes the old tab's error stale either way.
+        setError(null)
+        // If the user was capturing and the stream died (navigation, closed
+        // tab), chase the tab they moved to. When Chrome still holds a grant
+        // for it this reconnects silently, which is the auto-reestablish the
+        // user asked for; when it does not, the attempt fails into the calm
+        // press-the-button state rather than an error.
+        if (wantsCapture.current) void connectRef.current(tab.id)
       })
     }
     refresh()
@@ -707,32 +733,50 @@ export function App() {
       >
         {!connected && !synthSettings.enabled && (
           <div className="stage-overlay">
-            {error ? (
+            {/* Needing the toolbar click is a designed state, not a failure:
+                no red, no raw API text (that lives in the console), just the
+                one instruction. Anything else that goes wrong keeps Chrome's
+                own words visible, because those are debuggable. */}
+            {needsInvocation ? (
+              <>
+                <p>
+                  Chrome needs one click to share {target?.host || 'this tab'}.
+                </p>
+                <p className="detail">
+                  Press the <strong>Audio Scope</strong> button in your toolbar. The panel
+                  connects on its own.
+                </p>
+              </>
+            ) : error ? (
               <>
                 <p className="error">{error.hint}</p>
                 {error.detail && <p className="detail mono">{error.detail}</p>}
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="primary"
+                  onClick={() => connect()}
+                  disabled={connecting}
+                >
+                  {connecting ? 'Connecting' : 'Connect'}
+                </button>
               </>
             ) : (
-              <p>
-                Connect to visualize {target?.host || 'this tab'}. Audio passes through
-                untouched.
-              </p>
-            )}
-            {needsInvocation ? (
-              <p className="detail">
-                Click the <strong>Audio Scope</strong> icon in your toolbar. It reconnects
-                on its own.
-              </p>
-            ) : (
-              <button
-                type="button"
-                className="btn"
-                data-variant="primary"
-                onClick={() => connect()}
-                disabled={connecting}
-              >
-                {connecting ? 'Connecting' : 'Connect'}
-              </button>
+              <>
+                <p>
+                  Connect to visualize {target?.host || 'this tab'}. Audio passes through
+                  untouched.
+                </p>
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="primary"
+                  onClick={() => connect()}
+                  disabled={connecting}
+                >
+                  {connecting ? 'Connecting' : 'Connect'}
+                </button>
+              </>
             )}
           </div>
         )}
@@ -812,7 +856,7 @@ export function App() {
       <div className="source">
         <span
           className="dot"
-          data-state={error ? 'error' : connected ? 'live' : 'idle'}
+          data-state={error && !error.recoverable ? 'error' : connected ? 'live' : 'idle'}
           aria-hidden="true"
         />
         <span className="source-label" title={target?.title}>
@@ -821,7 +865,7 @@ export function App() {
         <button
           type="button"
           className="btn"
-          onClick={connected ? disconnect : () => connect()}
+          onClick={connected ? stopCapture : () => connect()}
           disabled={connecting}
         >
           {connected ? 'Disconnect' : connecting ? 'Connecting' : 'Connect'}
