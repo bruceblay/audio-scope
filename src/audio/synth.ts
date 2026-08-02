@@ -160,7 +160,15 @@ class Voice {
     // Filter envelope: opens `envAmount` octaves above the cutoff on attack and
     // falls back to it. This is what makes a note have a shape rather than just
     // a volume.
-    this.filter.frequency.setValueAtTime(s.cutoff, now)
+    //
+    // Set directly, not via setValueAtTime: scheduleFilter starts by cancelling
+    // scheduled events, and a setValueAtTime here was being cancelled before it
+    // ever rendered - leaving the filter at the node's 350 Hz default and
+    // turning every note-on into a giant surprise sweep. At high resonance that
+    // sweep is exactly the "fast parameter automation" that destabilizes
+    // Chrome's biquad, which then rings a pure sine at its own frequency no
+    // matter what waveform feeds it.
+    this.filter.frequency.value = s.cutoff
     this.scheduleFilter(now)
 
     // Amp envelope. Ramps rather than steps: a step on a gain node is a click.
@@ -197,7 +205,9 @@ class Voice {
       this.oscA.frequency.setTargetAtTime(hz, now, 0.01)
       this.oscB.frequency.setTargetAtTime(hz, now, 0.01)
     }
-    if (next.resonance !== prev.resonance) this.filter.Q.setTargetAtTime(next.resonance, now, 0.01)
+    // Q moves slowly on purpose: frequency and Q automating fast together is
+    // the classic biquad instability recipe.
+    if (next.resonance !== prev.resonance) this.filter.Q.setTargetAtTime(next.resonance, now, 0.08)
 
     if (next.cutoff !== prev.cutoff || next.envAmount !== prev.envAmount || next.decay !== prev.decay)
       this.scheduleFilter(now)
@@ -224,8 +234,14 @@ class Voice {
 
     freq.cancelScheduledValues(now)
     freq.setValueAtTime(freq.value, now)
+    // Exponential approaches only, never linear ramps: setTargetAtTime moves
+    // the frequency asymptotically, which is far gentler on the biquad's
+    // coefficient interpolation than a linear race to the target. The attack
+    // approach uses a third of the attack time as its constant, so it reaches
+    // ~95% of open by the attack's end - the same audible shape without the
+    // instability-triggering sweep.
     if (now < attackEnd) {
-      freq.linearRampToValueAtTime(open, attackEnd)
+      freq.setTargetAtTime(open, now, Math.max(0.003, s.attack / 3))
       freq.setTargetAtTime(s.cutoff, attackEnd, decay)
     } else {
       // Four time constants is within 2% of the target, so past that the decay
