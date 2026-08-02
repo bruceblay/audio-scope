@@ -120,7 +120,10 @@ class Voice {
 
     this.filter = ctx.createBiquadFilter()
     this.filter.type = 'lowpass'
-    this.filter.Q.value = s.resonance
+    // Q capped at 14 in the audio layer no matter what settings carry: still a
+    // screaming resonance, but inside the region where swept biquads stay
+    // numerically stable.
+    this.filter.Q.value = clamp(s.resonance, 0.5, 14)
 
     this.amp = ctx.createGain()
     this.amp.gain.value = 0
@@ -200,12 +203,29 @@ class Voice {
     }
     // Q moves slowly on purpose: frequency and Q automating fast together is
     // the classic biquad instability recipe.
-    if (next.resonance !== prev.resonance) this.filter.Q.setTargetAtTime(next.resonance, now, 0.08)
+    if (next.resonance !== prev.resonance)
+      this.filter.Q.setTargetAtTime(clamp(next.resonance, 0.5, 14), now, 0.08)
 
     if (next.cutoff !== prev.cutoff || next.envAmount !== prev.envAmount || next.decay !== prev.decay)
-      this.scheduleFilter(now)
+      this.requestFilterReschedule()
     if (next.level !== prev.level || next.sustain !== prev.sustain || next.decay !== prev.decay)
       this.scheduleAmp(now)
+  }
+
+  /**
+   * Coalesce knob-drag reschedules. A drag patches settings dozens of times a
+   * second, and each filter reschedule is a cancel-and-retarget on every
+   * sounding voice - itself the "fast parameter automation" Chrome warns
+   * about. One reschedule per 50 ms window, trailing edge, keeps the knob
+   * feeling live without machine-gunning the filter.
+   */
+  private rescheduleTimer: number | null = null
+  private requestFilterReschedule() {
+    if (this.rescheduleTimer !== null) return
+    this.rescheduleTimer = window.setTimeout(() => {
+      this.rescheduleTimer = null
+      if (!this.stopped) this.scheduleFilter(this.ctx.currentTime)
+    }, 50)
   }
 
   /**
@@ -222,7 +242,10 @@ class Voice {
     const s = this.s
     const attackEnd = this.startAt + Math.max(0.002, s.attack)
     const decay = Math.max(0.01, s.decay)
-    const open = clamp(s.cutoff * Math.pow(2, s.envAmount), 20, 20000)
+    // The envelope's open frequency stays well below Nyquist: a high-Q lowpass
+    // swept toward Nyquist is the least numerically stable place a biquad can
+    // be, and is where Chrome's "state is bad" warning lives.
+    const open = clamp(s.cutoff * Math.pow(2, s.envAmount), 20, this.ctx.sampleRate * 0.35)
     const freq = this.filter.frequency
 
     freq.cancelScheduledValues(now)
@@ -234,12 +257,14 @@ class Voice {
     // ~95% of open by the attack's end - the same audible shape without the
     // instability-triggering sweep.
     if (now < attackEnd) {
-      freq.setTargetAtTime(open, now, Math.max(0.003, s.attack / 3))
+      // 8 ms floor on the approach constant: below that, a high-Q sweep is
+      // fast enough to destabilize the coefficient interpolation.
+      freq.setTargetAtTime(open, now, Math.max(0.008, s.attack / 3))
       freq.setTargetAtTime(s.cutoff, attackEnd, decay)
     } else {
       // Four time constants is within 2% of the target, so past that the decay
       // has effectively finished and there is no sweep left to preserve.
-      freq.setTargetAtTime(s.cutoff, now, now > attackEnd + 4 * decay ? 0.04 : decay)
+      freq.setTargetAtTime(s.cutoff, now, now > attackEnd + 4 * decay ? 0.08 : decay)
     }
   }
 
@@ -268,6 +293,7 @@ class Voice {
   release(seconds: number) {
     if (this.stopped) return
     this.stopped = true
+    if (this.rescheduleTimer !== null) window.clearTimeout(this.rescheduleTimer)
     const now = this.ctx.currentTime
     const tail = Math.max(0.02, seconds)
     this.amp.gain.cancelScheduledValues(now)
@@ -284,6 +310,7 @@ class Voice {
   /** Cut immediately, for panic and teardown. */
   kill() {
     this.stopped = true
+    if (this.rescheduleTimer !== null) window.clearTimeout(this.rescheduleTimer)
     try {
       this.oscA.stop()
       this.oscB.stop()
