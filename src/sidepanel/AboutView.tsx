@@ -49,7 +49,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
         <p className="about-note">
           When you move to a new tab, the panel follows and reconnects by itself wherever
           Chrome allows. When Chrome wants a fresh click first, the panel says so — press
-          the toolbar button and it takes it from there. Chrome withdraws capture rights
+          the toolbar button (or Alt+A) and it takes it from there. Chrome withdraws capture rights
           whenever a tab navigates, and no extension can renew them without that click.
         </p>
 

@@ -31,5 +31,14 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+A",
+        "mac": "Alt+A"
+      },
+      "description": "Grant Audio Scope access to the current tab"
+    }
   }
 }

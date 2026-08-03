@@ -755,8 +755,8 @@ export function App() {
                   Chrome needs one click to share {target?.host || 'this tab'}.
                 </p>
                 <p className="detail">
-                  Press the <strong>Audio Scope</strong> button in your toolbar. The panel
-                  connects on its own.
+                  Press the <strong>Audio Scope</strong> button in your toolbar, or hit{' '}
+                  <strong>Alt+A</strong>. The panel connects on its own.
                 </p>
               </>
             ) : error ? (

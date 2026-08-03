@@ -112,9 +112,16 @@ activeTab. Two changes turned it into a designed state:
    text (that goes to the console). The existing invocation note then turns
    the click into a completed reconnect with no further step.
 
-The ceiling is unchanged and worth restating: the activeTab grant only comes
-from a user gesture on the extension, so "fully automatic" is not available
-to any extension. This design reaches that ceiling.
+The ceiling is unchanged and worth restating, and was re-verified against
+current documentation (2026-08): the activeTab grant only comes from a user
+gesture on the extension - Chrome DevRel states capture "isn't possible
+without a user gesture" - and no persistent permission exists for tabCapture.
+"Fully automatic" is not available to any extension; this design reaches the
+ceiling. Two softeners are worth knowing: the grant survives same-origin
+navigation (only leaving the site revokes it), an active capture is
+maintained across navigations within its tab, and `_execute_action` in the
+manifest binds Alt+A as a keyboard route to the same grant, flowing through
+the identical auto-connect path as the icon click.
 
 ## Teardown
 
