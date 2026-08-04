@@ -1,17 +1,17 @@
-# Chrome Web Store content for Audio Scope
+CHROME WEB STORE CONTENT FOR AUDIO SCOPE
+Every block below is plain text. Copy between the ruled lines straight into
+the matching dashboard field.
 
-Everything below is copy/paste-ready for the developer dashboard. Modeled on
-browser-fx's `docs/chrome-web-store-content.md`, in this product's voice.
+========================================================================
+SHORT DESCRIPTION  (123/132 characters)
+========================================================================
 
-## Short description (123/132 characters)
-
-```
 A real oscilloscope for any tab: triggered CRT trace, X-Y stereo field, spectrum analyzer, waterfall, and a built-in synth.
-```
 
-## Detailed description
+========================================================================
+DETAILED DESCRIPTION
+========================================================================
 
-```
 Audio Scope is a real oscilloscope and spectrum analyzer for whatever a browser tab is playing. Audio passes through untouched — nothing is added to it, and nothing ever leaves your machine.
 
 The visualizations are real, not decorative. The trigger, the measurements, the frequency analysis: all of it is the actual signal processing a bench instrument does, verified against synthetic test signals. If the readout says 440 Hz, it is 440 Hz.
@@ -42,59 +42,65 @@ Audio Scope makes no network requests of any kind. No analytics, no accounts, no
 
 HOW IT WORKS
 Click the Audio Scope button in your toolbar on the tab you want to watch (Chrome requires this click to share a tab's audio — it's the same permission model as screen sharing). The panel opens alongside your browsing and reconnects on its own as you move around. Press Alt+A as a shortcut for the same thing.
-```
 
-## Category
+========================================================================
+CATEGORY
+========================================================================
 
-**Primary**: Tools
+Primary: Tools
 (Entertainment also fits; Tools matches "instrument" better.)
 
-## Single-purpose description
+========================================================================
+SINGLE-PURPOSE DESCRIPTION
+========================================================================
 
-```
 Visualize the audio of a browser tab in real time as an oscilloscope, spectrum analyzer, and spectrogram.
-```
 
-## Permission justifications
+========================================================================
+PERMISSION JUSTIFICATION: tabCapture
+========================================================================
 
-### tabCapture
-```
 Captures the audio stream of a tab so the extension can visualize it as an oscilloscope trace and spectrum. The audio passes through to the speakers unchanged; capture is the only way to read a tab's audio for analysis.
-```
 
-### activeTab
-```
+========================================================================
+PERMISSION JUSTIFICATION: activeTab
+========================================================================
+
 Chrome's tabCapture API requires the activeTab grant, given when the user clicks the extension's toolbar button on a tab. The extension can only ever access tabs the user has explicitly invoked it on.
-```
 
-### sidePanel
-```
+========================================================================
+PERMISSION JUSTIFICATION: sidePanel
+========================================================================
+
 The extension's entire interface — the oscilloscope screen, analyzer, and controls — lives in Chrome's side panel so it can be watched alongside the tab that is playing.
-```
 
-### storage
-```
+========================================================================
+PERMISSION JUSTIFICATION: storage
+========================================================================
+
 Saves the user's control settings and their saved presets (chrome.storage.sync), so the instrument opens the way they left it. No audio and no browsing data is ever stored.
-```
 
-## Data usage disclosures (privacy tab)
+========================================================================
+DATA USAGE DISCLOSURES (privacy tab)
+========================================================================
 
-- Does NOT collect any user data. Check no categories.
-- No remote code: all code is packaged in the extension; no CDNs, no eval,
-  no external requests of any kind.
+Does not collect any user data: check no categories.
+No remote code: all code is packaged in the extension. No CDNs, no eval, no external requests of any kind.
 
-## Store listing metadata
+========================================================================
+STORE LISTING METADATA
+========================================================================
 
-- Developer name: Bruce Blay
-- Support email: bruceblay@gmail.com
+Developer name: Bruce Blay
+Support email: bruceblay@gmail.com
 
-## Release checklist
+========================================================================
+RELEASE CHECKLIST (not for the store; for us)
+========================================================================
 
-- [ ] `npm run package` -> `audio-scope-v<version>.zip` (manifest at zip root)
-- [ ] Screenshots: 1280x800 PNG, at least one; suggest one per mode
-      (CRT scope on music, X-Y figure, analyzer curve, waterfall, Text mode,
-      synth panel). Taken by hand in a real browser - the good-looking part
-      is the point.
-- [ ] Small promo tile 440x280 (optional but recommended)
-- [ ] Bump `version` in public/manifest.json and package.json together for
-      each store upload; the store rejects re-uploads of the same version.
+1. npm run package  ->  audio-scope-v<version>.zip (manifest at zip root)
+2. Screenshots: 1280x800 PNG, at least one. Suggested set: CRT scope on
+   music, X-Y figure, analyzer curve, waterfall, Text mode, synth panel.
+3. Small promo tile 440x280 (optional but recommended).
+4. Bump version in public/manifest.json for every upload; the store rejects
+   a re-used version number.
