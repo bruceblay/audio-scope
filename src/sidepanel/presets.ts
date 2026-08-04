@@ -47,10 +47,12 @@ export function applyPreset(p: Preset): {
   analyzer: AnalyzerSettings
 } {
   // The dots style shipped briefly as 'tui' and then 'text'; user presets
-  // saved in those windows coerce forward.
-  const style = (v: { displayStyle?: string }) =>
+  // saved in those windows coerce forward. Generic in and out, so the partial
+  // settings keep their type; the cast is safe because 'dots' is the one
+  // value both old strings mean.
+  const style = <T extends { displayStyle?: string }>(v: T): T =>
     v.displayStyle === 'tui' || v.displayStyle === 'text'
-      ? { ...v, displayStyle: 'dots' as const }
+      ? ({ ...v, displayStyle: 'dots' } as T)
       : v
   return {
     mode: p.mode,
