@@ -21,7 +21,8 @@
     "test:analyzer": "esbuild test/analyzer.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/analyzer.test.mjs && node node_modules/.cache/analyzer.test.mjs",
     "test:meters": "esbuild test/meters.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/meters.test.mjs && node node_modules/.cache/meters.test.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "test:synth": "esbuild test/synth.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/synth.test.mjs && node node_modules/.cache/synth.test.mjs"
+    "test:synth": "esbuild test/synth.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/synth.test.mjs && node node_modules/.cache/synth.test.mjs",
+    "package": "npm run build && rm -f audio-scope-v${npm_package_version}.zip && (cd dist && zip -rq ../audio-scope-v${npm_package_version}.zip . -x '*.DS_Store')"
   },
   "dependencies": {
     "react": "^19.2.8",
