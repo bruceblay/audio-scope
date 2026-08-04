@@ -12,13 +12,13 @@ A real oscilloscope for any tab: triggered CRT trace, X-Y stereo field, spectrum
 DETAILED DESCRIPTION
 ========================================================================
 
-Audio Scope is a real oscilloscope and spectrum analyzer for whatever a browser tab is playing. Audio passes through untouched — nothing is added to it, and nothing ever leaves your machine.
+Audio Scope is a real oscilloscope and spectrum analyzer for whatever a browser tab is playing. Audio passes through untouched: nothing is added to it, and nothing ever leaves your machine.
 
 The visualizations are real, not decorative. The trigger, the measurements, the frequency analysis: all of it is the actual signal processing a bench instrument does, verified against synthetic test signals. If the readout says 440 Hz, it is 440 Hz.
 
 OSCILLOSCOPE
 • Triggered sweep with sub-sample edge interpolation, so a steady waveform stands still
-• X-Y (goniometer) mode: mono collapses to a diagonal, stereo opens into a shape — oscilloscope music draws pictures in it
+• X-Y (goniometer) mode: mono collapses to a diagonal, stereo opens into a shape. Oscilloscope music draws pictures in it
 • Calibrated time base and volts-per-division in the 1-2-5 steps a real scope uses
 • Beam physics: brightness follows dwell time, phosphor persistence decays like a tube, halation fuses the trace
 • Three phosphors (green, long-persistence blue, amber), bandwidth limit, and live measurements: Vpp, Vrms, dBFS, frequency, period, duty cycle
@@ -35,13 +35,13 @@ BUILT-IN SYNTH
 A two-oscillator synth with filter, envelopes, delay, reverb, and an arpeggiator, played from your computer keyboard. It exists so you always have a known signal to explore: hold a note and watch the exact waveform and spectrum it produces.
 
 PRESETS
-Factory scenes for oscilloscope music, spectrogram art, a stock bench scope and more — plus your own, saved and synced.
+Factory scenes for oscilloscope music, spectrogram art, a stock bench scope and more, plus your own, saved and synced.
 
 PRIVACY
 Audio Scope makes no network requests of any kind. No analytics, no accounts, no servers. Audio is analyzed on your machine and nowhere else; the only thing stored is your settings.
 
 HOW IT WORKS
-Click the Audio Scope button in your toolbar on the tab you want to watch (Chrome requires this click to share a tab's audio — it's the same permission model as screen sharing). The panel opens alongside your browsing and reconnects on its own as you move around. Press Alt+A as a shortcut for the same thing.
+Click the Audio Scope button in your toolbar on the tab you want to watch (Chrome requires this click to share a tab's audio, the same permission model as screen sharing). The panel opens alongside your browsing and reconnects on its own as you move around. Press Alt+A as a shortcut for the same thing.
 
 ========================================================================
 CATEGORY
@@ -72,7 +72,7 @@ Chrome's tabCapture API requires the activeTab grant, given when the user clicks
 PERMISSION JUSTIFICATION: sidePanel
 ========================================================================
 
-The extension's entire interface — the oscilloscope screen, analyzer, and controls — lives in Chrome's side panel so it can be watched alongside the tab that is playing.
+The extension's entire interface, the oscilloscope screen, analyzer, and controls, lives in Chrome's side panel so it can be watched alongside the tab that is playing.
 
 ========================================================================
 PERMISSION JUSTIFICATION: storage
