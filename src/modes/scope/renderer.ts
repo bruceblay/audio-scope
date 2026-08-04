@@ -173,7 +173,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       this.tuiDirty = true
       this.persistCtx?.clearRect(0, 0, this.w, this.h)
     }
-    if (s.displayStyle === 'text') {
+    if (s.displayStyle === 'dots') {
       this.renderTui(frame, s, theme)
       return
     }

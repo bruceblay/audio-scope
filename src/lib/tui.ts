@@ -20,7 +20,7 @@
  * How the trace is painted, shared by the scope and the analyzer: 'crt' is
  * the continuous instrument model, 'tui' is the character-cell discipline.
  */
-export type DisplayStyle = 'crt' | 'text'
+export type DisplayStyle = 'crt' | 'dots'
 
 /** Terminal refresh: ~18 Hz. The slight choppiness is part of the discipline. */
 export const TUI_TICK = 1 / 18

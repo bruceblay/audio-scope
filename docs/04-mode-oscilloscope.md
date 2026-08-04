@@ -239,10 +239,10 @@ single soft ribbon, at 1.0 it is fully fused.
 Default is 0.8: the fused ribbon is the intended look (chosen by eye on real
 material). Zero restores the forever-crisp stacking exactly.
 
-## Text display style
+## Dots display style
 
 The scope has two display disciplines, switched in the Display section: the
-CRT below, and **Text** - the same trace drawn the way a terminal draws it
+CRT below, and **Dots** - the same trace drawn the way a terminal draws it
 (`src/modes/scope/tui.ts`). Not a retro filter over the CRT image: a second
 set of real constraints, which is where the look comes from.
 
@@ -263,7 +263,7 @@ set of real constraints, which is where the look comes from.
   too bright.
 - **Persistence decays in steps**, one multiplicative fade per tick with a
   flush to true zero. Focus and halation do not apply - there is no beam width
-  and no phosphor image to diffuse - and their controls hide in Text style.
+  and no phosphor image to diffuse - and their controls hide in Dots style.
 - The graticule becomes dotted rules, one dot per cell: terminal box
   furniture rather than etched glass.
 

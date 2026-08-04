@@ -28,8 +28,8 @@ ANALYZER
 • Waterfall spectrogram with a perceptually uniform color ramp
 • Log frequency axis, fractional-octave smoothing, selectable analysis window from snappy to bass-resolving
 
-TEXT MODE
-Every view can also render the way a terminal draws: a character-cell lattice with quantized brightness and a lazy refresh. Same signal, same measurements, retro display.
+DOTS MODE
+Every view can also render as a dithered dot grid, the way a terminal plotter draws: quantized brightness, chunky cells, a lazy refresh. Same signal, same measurements, retro display.
 
 BUILT-IN SYNTH
 A two-oscillator synth with filter, envelopes, delay, reverb, and an arpeggiator, played from your computer keyboard. It exists so you always have a known signal to explore: hold a note and watch the exact waveform and spectrum it produces.

@@ -46,10 +46,16 @@ export function applyPreset(p: Preset): {
   scope: ScopeSettings
   analyzer: AnalyzerSettings
 } {
+  // The dots style shipped briefly as 'tui' and then 'text'; user presets
+  // saved in those windows coerce forward.
+  const style = (v: { displayStyle?: string }) =>
+    v.displayStyle === 'tui' || v.displayStyle === 'text'
+      ? { ...v, displayStyle: 'dots' as const }
+      : v
   return {
     mode: p.mode,
-    scope: { ...DEFAULT_SCOPE_SETTINGS, ...p.scope },
-    analyzer: { ...DEFAULT_ANALYZER_SETTINGS, ...p.analyzer },
+    scope: { ...DEFAULT_SCOPE_SETTINGS, ...style(p.scope) },
+    analyzer: { ...DEFAULT_ANALYZER_SETTINGS, ...style(p.analyzer) },
   }
 }
 

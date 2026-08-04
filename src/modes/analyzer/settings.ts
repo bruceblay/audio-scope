@@ -63,7 +63,7 @@ export const BANDS_PER_OCTAVE = [1, 3, 6] as const
 
 export interface AnalyzerSettings {
   view: AnalyzerView
-  /** 'crt' is the continuous instrument; 'text' the character-cell discipline
+  /** 'crt' is the continuous instrument; 'dots' the character-cell discipline
    * shared with the scope. */
   displayStyle: DisplayStyle
 

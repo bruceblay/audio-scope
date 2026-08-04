@@ -77,8 +77,8 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           </li>
           <li>
             <strong>Style</strong> switches the display discipline: CRT is the beam and
-            phosphor; Text draws the same trace as a terminal would: a dotted character
-            grid with a lazy refresh.
+            phosphor; Dots draws the same trace as a terminal would: a dithered dot grid
+            with a lazy refresh.
           </li>
           <li>
             <strong>BW limit</strong> is the bench scope's noise button: a lowpass on the
@@ -110,7 +110,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             balance against.
           </li>
           <li>
-            <strong>Style</strong> works here too: Text redraws the curve as dots, the bars
+            <strong>Style</strong> works here too: Dots redraws the curve as points, the bars
             as blocks, and the waterfall as a dithered character grid.
           </li>
           <li>

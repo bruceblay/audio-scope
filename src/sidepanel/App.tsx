@@ -602,10 +602,13 @@ export function App() {
       // Enabled is deliberately not restored: an extension that starts making
       // noise on open is hostile, however the setting was left.
       setSynthSettings((prev) => ({ ...adopt(prev, saved.synth, was?.synth), enabled: false }))
-      // The text style shipped briefly under the value 'tui'; stored settings
-      // from that window coerce forward instead of silently falling to CRT.
+      // The dots style shipped briefly as 'tui' and then 'text'; stored
+      // settings from those windows coerce forward instead of silently falling
+      // to CRT.
       const styled = <T extends { displayStyle?: string }>(v: T): T =>
-        (v.displayStyle as string) === 'tui' ? { ...v, displayStyle: 'text' } : v
+        (v.displayStyle as string) === 'tui' || (v.displayStyle as string) === 'text'
+          ? { ...v, displayStyle: 'dots' }
+          : v
       setScope((prev) => styled(adopt(prev, saved.scope, was?.scope)))
       setCymatics((prev) => adopt(prev, saved.cymatics, was?.cymatics))
       setAnalyzer((prev) => styled(adopt(prev, saved.analyzer, was?.analyzer)))

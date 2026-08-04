@@ -57,7 +57,7 @@ export function ScopePanel({
   settings: ScopeSettings
   patch: (next: Partial<ScopeSettings>) => void
 }) {
-  const isText = settings.displayStyle === 'text'
+  const isDots = settings.displayStyle === 'dots'
   const isXY = settings.channel === 'xy'
   return (
     <>
@@ -233,7 +233,7 @@ export function ScopePanel({
             onChange={(displayStyle) => patch({ displayStyle })}
             options={[
               { value: 'crt', label: 'CRT' },
-              { value: 'text', label: 'Text' },
+              { value: 'dots', label: 'Dots' },
             ]}
           />
         </Row>
@@ -261,7 +261,7 @@ export function ScopePanel({
         {/* FOCUS on a real front panel. Higher is a tighter spot. */}
         {/* Beam optics: CRT-only. The lattice has no beam to focus and no
             phosphor image to diffuse. */}
-        {!isText && (
+        {!isDots && (
           <>
         <Row label="Focus">
           <Slider
