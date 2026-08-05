@@ -20,6 +20,7 @@ import {
 } from './settings'
 import { bandlimit, bwKernel } from './bandwidth'
 import { CellGrid, TUI_TICK, TUI_LEVELS } from '../../lib/tui'
+import { BeamGL } from './beamgl'
 import { Trigger } from './trigger'
 
 /** Alpha quantization levels. Segments are grouped by level so each level strokes once. */
@@ -50,6 +51,12 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   private persistCtx: CanvasRenderingContext2D | null = null
   private blurTmp: HTMLCanvasElement | null = null
   private blurTmpCtx: CanvasRenderingContext2D | null = null
+
+  // --- GPU beam -----------------------------------------------------------
+  // The analytic Gaussian beam (see beamgl.ts). When available it replaces
+  // only the paint of the trace; furniture, trigger, measurements and the
+  // whole Canvas2D path stay, the latter as automatic fallback.
+  private beamGL = new BeamGL()
 
   // --- X-Y streaming state ------------------------------------------------
   private xyLastTime = 0
@@ -149,6 +156,8 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     this.tuiDirty = true
     this.xyHasPrev = false
     this.xyLastTime = 0
+
+    this.beamGL.resize(width, height)
   }
 
   /** One diffusion step: persist -> tmp, then tmp -> persist through a blur. */
@@ -181,46 +190,55 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       this.tuiDirty = true
       this.xyHasPrev = false
       this.persistCtx?.clearRect(0, 0, this.w, this.h)
+      this.beamGL.clear()
     }
     if (s.displayStyle === 'dots') {
       this.renderTui(frame, s, theme)
       return
     }
 
-    // --- Phosphor decay ---------------------------------------------------
-    // 'destination-out' multiplies existing alpha by (1 - d) rather than
-    // blending toward black, so the image converges toward transparent instead
-    // of toward a grey floor. See decayDebt for why it is applied in batches.
-    const p = this.persistCtx
-    this.decayDebt += frame.dt
-    const decay = s.persistence <= 0 ? 1 : 1 - Math.exp(-this.decayDebt / s.persistence)
-    if (decay >= MIN_DECAY) {
-      this.decayDebt = 0
-      p.globalCompositeOperation = 'destination-out'
-      p.fillStyle = `rgba(0,0,0,${clamp(decay, 0, 1)})`
-      p.fillRect(0, 0, this.w, this.h)
-    }
-
-    // --- Halation ---------------------------------------------------------
-    // The persistence image diffuses a little every frame, so the stack of
-    // nearly-identical passes that persistence holds fuses into one averaged
-    // ribbon instead of reading as distinct hairlines - the "scribble". This
-    // is where the scribble actually lives: BETWEEN passes, which no amount of
-    // per-pass filtering (smoothing, BW limit) can reach. Optically this is
-    // what a CRT's spot size and halation do to superimposed traces. Blur
-    // compounds across frames as sqrt(n), so the newest trace stays sharp
-    // while history melts; the radius is small on purpose.
-    if (s.halation > 0) this.diffuse(s.halation)
-
     // --- Build the beam ---------------------------------------------------
     if (s.channel === 'xy') this.buildXY(frame, s)
     else this.buildSweep(frame, s)
 
-    // --- Paint the beam additively ---------------------------------------
-    p.globalCompositeOperation = 'lighter'
-    p.lineCap = 'round'
-    p.lineJoin = 'round'
-    this.strokeBuckets(p, s)
+    // --- Paint the beam ---------------------------------------------------
+    // GPU path first: the analytic Gaussian beam with float accumulation and
+    // a tonemap (see beamgl.ts). Everything the two paths share - trigger,
+    // measurements, furniture - already happened above or happens below.
+    const phos = phosphor[s.phosphor]
+    const painted = this.beamGL.render(this.xs, this.ys, this.pointCount, {
+      // Focus maps to spot sigma: high focus is a tight spot.
+      sigma: (0.6 + (1 - clamp(s.beamFocus, 0, 1)) * 1.9) * this.dpr,
+      // All segments span equal time; energy per segment scales with
+      // intensity. The constant is calibrated by eye against the harness.
+      gain: s.intensity * 30,
+      halation: clamp(s.halation, 0, 1),
+      decay: s.persistence <= 0 ? 0 : Math.exp(-frame.dt / s.persistence),
+      core: [phos.rgb[0] / 255, phos.rgb[1] / 255, phos.rgb[2] / 255],
+      bloom: [1, 1, 1],
+      exposure: 0.12,
+    })
+
+    if (!painted) {
+      // --- Canvas2D fallback: decay, halation diffusion, stroked beam -----
+      // 'destination-out' multiplies existing alpha by (1 - d) rather than
+      // blending toward black, so the image converges toward transparent
+      // instead of toward a grey floor.
+      const p = this.persistCtx
+      this.decayDebt += frame.dt
+      const decay = s.persistence <= 0 ? 1 : 1 - Math.exp(-this.decayDebt / s.persistence)
+      if (decay >= MIN_DECAY) {
+        this.decayDebt = 0
+        p.globalCompositeOperation = 'destination-out'
+        p.fillStyle = `rgba(0,0,0,${clamp(decay, 0, 1)})`
+        p.fillRect(0, 0, this.w, this.h)
+      }
+      if (s.halation > 0) this.diffuse(s.halation)
+      p.globalCompositeOperation = 'lighter'
+      p.lineCap = 'round'
+      p.lineJoin = 'round'
+      this.strokeBuckets(p, s)
+    }
 
     // --- Compose the screen ----------------------------------------------
     const c = this.ctx
@@ -231,7 +249,14 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     this.drawGraticule(s, theme)
     if (this.grat) c.drawImage(this.grat, 0, 0)
 
-    c.drawImage(this.persist, 0, 0)
+    // Beam light adds over the graticule, as light does.
+    if (painted) {
+      c.globalCompositeOperation = 'lighter'
+      c.drawImage(this.beamGL.canvas, 0, 0)
+      c.globalCompositeOperation = 'source-over'
+    } else {
+      c.drawImage(this.persist, 0, 0)
+    }
 
     this.drawTriggerMarker(s)
     this.drawVignette(skin.vignette)
@@ -242,6 +267,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   }
 
   dispose() {
+    this.beamGL.dispose()
     this.persist = null
     this.persistCtx = null
     this.blurTmp = null

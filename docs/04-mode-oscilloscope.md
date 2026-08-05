@@ -283,6 +283,34 @@ their own Display sections.
 
 ## CRT rendering
 
+### The analytic beam (GPU)
+
+The trace is painted by a WebGL2 pipeline (`src/modes/scope/beamgl.ts`) using
+the technique every serious web oscilloscope converged on independently -
+woscope (m1el), XXY Oscilloscope (N. Thapen), Nick Tasios' write-up. Each
+audio segment becomes an instanced quad whose fragment shader evaluates the
+exact integrated intensity of a Gaussian beam spot travelling the segment:
+
+    F(p) = (E / 2l) * exp(-py^2 / 2s^2)
+         * [erf(px / s*sqrt2) - erf((px - l) / s*sqrt2)]
+
+The 1/l factor is dwell physics falling out of the integral: equal energy
+spread over a longer path is dimmer per pixel, continuously, which replaces
+the Canvas2D path's 24-bucket approximation. Energy accumulates linearly in a
+half-float texture - light adds; 8-bit canvas compositing clips, which was a
+large part of the historical "fog" - persistence is a per-frame
+multiplicative decay of that texture, and a tonemap converts energy to
+phosphor colour, saturating through the core hue toward bloom-white.
+Halation on this path is a second, four-sigma-wide component of the beam
+itself rather than a blur of the accumulated image.
+
+The Canvas2D pipeline below remains in full as the automatic fallback (no
+WebGL2, no float render targets, or a lost context), and everything outside
+the paint - trigger, measurements, furniture, readouts - is shared by both
+paths untouched.
+
+### Beam intensity follows dwell time (Canvas2D fallback)
+
 The look is not a filter over a line chart. It is a model of what an analog scope
 screen actually does, and the model is why it looks right.
 
