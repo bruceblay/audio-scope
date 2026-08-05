@@ -309,10 +309,10 @@ WebGL2, no float render targets, or a lost context), and everything outside
 the paint - trigger, measurements, furniture, readouts - is shared by both
 paths untouched.
 
-### Beam intensity follows dwell time (Canvas2D fallback)
-
-The look is not a filter over a line chart. It is a model of what an analog scope
-screen actually does, and the model is why it looks right.
+The sections below describe the Canvas2D fallback's model. The look is not a
+filter over a line chart: it is a model of what an analog scope screen
+actually does, and the model is why it looks right. The GPU path computes the
+same physics exactly; the fallback approximates it.
 
 ### Beam intensity follows dwell time
 
