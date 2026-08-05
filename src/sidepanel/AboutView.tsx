@@ -72,8 +72,8 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             the 1-2-5 steps a bench scope uses. The screen is ruled 10 × 8.
           </li>
           <li>
-            <strong>Exposure</strong> (X-Y) sets how much audio is drawn at once. Shorter is
-            tighter and more immediate; persistence supplies the tail.
+            In X-Y the beam streams: every sample is drawn exactly once as it arrives, as
+            on a real tube. <strong>Persistence</strong> decides how long it stays.
           </li>
           <li>
             <strong>Style</strong> switches the display discipline: CRT is the beam and

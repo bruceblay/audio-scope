@@ -51,6 +51,12 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
   private blurTmp: HTMLCanvasElement | null = null
   private blurTmpCtx: CanvasRenderingContext2D | null = null
 
+  // --- X-Y streaming state ------------------------------------------------
+  private xyLastTime = 0
+  private xyPrevX = 0
+  private xyPrevY = 0
+  private xyHasPrev = false
+
   // --- TUI display state --------------------------------------------------
   private tui = new CellGrid()
   private tuiDebt = 0
@@ -141,6 +147,8 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
 
     this.tui.resize(width, height, dpr)
     this.tuiDirty = true
+    this.xyHasPrev = false
+    this.xyLastTime = 0
   }
 
   /** One diffusion step: persist -> tmp, then tmp -> persist through a blur. */
@@ -171,6 +179,7 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
       this.tui.clear()
       this.tuiDebt = 0
       this.tuiDirty = true
+      this.xyHasPrev = false
       this.persistCtx?.clearRect(0, 0, this.w, this.h)
     }
     if (s.displayStyle === 'dots') {
@@ -435,9 +444,20 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
    */
   private buildXY(frame: AudioFrame, s: ScopeSettings) {
     const record = frame.timeL.length
-    // Only the most recent slice of the record. The analyser always hands back
-    // the newest `record` samples, so taking the tail is taking the present.
-    const exposure = Math.round(clamp(s.xyExposure, 2, Math.min(record, MAX_POINTS)))
+
+    // Streaming: draw only the audio that arrived since the last X-Y frame,
+    // so every sample is painted exactly once - the way the electron beam
+    // sweeps it exactly once. The previous design drew the most recent
+    // `exposure` samples every frame, which repainted each stroke two to five
+    // times in slightly different places as the figure animated; the passes
+    // stacked additively into exactly the fog the user compared against real
+    // oscilloscope-music footage. Persistence alone carries history now.
+    const elapsed = this.xyLastTime === 0 ? 1 / 60 : (frame.time - this.xyLastTime) / 1000
+    this.xyLastTime = frame.time
+    // A stall longer than the record means audio was lost; draw the whole
+    // record once rather than pretending continuity.
+    const fresh = Math.round(clamp(elapsed, 0, 0.2) * frame.sampleRate)
+    const exposure = Math.max(2, Math.min(record, MAX_POINTS, fresh))
     const from = record - exposure
 
     // BW limit runs upstream of the display smoothing: the limiter sets what
@@ -460,20 +480,32 @@ export class ScopeRenderer implements Renderer<ScopeSettings, ScopeReadout> {
     let min = Infinity
     let max = -Infinity
     let sumSq = 0
+    // The previous frame's final beam position starts this frame's path, so
+    // strokes connect across the frame boundary instead of leaving a gap.
+    let n = 0
+    if (this.xyHasPrev) {
+      this.xs[0] = this.xyPrevX
+      this.ys[0] = this.xyPrevY
+      n = 1
+    }
     for (let i = 0; i < exposure; i++) {
       const l = this.smoothX[i]
       const r = this.smoothY[i]
-      this.xs[i] = cx + l * scale
-      this.ys[i] = cy - r * scale
+      this.xs[n] = cx + l * scale
+      this.ys[n] = cy - r * scale
+      n++
       const m = (l + r) * 0.5
       if (m < min) min = m
       if (m > max) max = m
       sumSq += m * m
     }
-    this.pointCount = exposure
+    this.xyPrevX = this.xs[n - 1]
+    this.xyPrevY = this.ys[n - 1]
+    this.xyHasPrev = true
+    this.pointCount = n
 
     this.out.vpp = max - min
-    this.out.vrms = Math.sqrt(sumSq / exposure)
+    this.out.vrms = Math.sqrt(sumSq / Math.max(1, exposure))
     this.out.dbfs = linearToDb(Math.max(Math.abs(min), Math.abs(max)))
     this.out.period = 0
     this.out.hz = 0

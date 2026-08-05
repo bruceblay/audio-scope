@@ -3,7 +3,6 @@ import {
   type DisplayStyle,
   TIME_PER_DIV,
   VOLTS_PER_DIV,
-  XY_EXPOSURE,
   type Channel,
   type ScopeReadout,
   type ScopeSettings,
@@ -115,15 +114,6 @@ export function ScopePanel({
           {/* Exposure is the X-Y equivalent of a time base. The full record is
               85 ms at 48 kHz, which drawn all at once reads as lag and scribble.
               Shorter is more current and cleaner; persistence supplies the tail. */}
-          <Row label="Exposure">
-            <Stepper
-              label="Exposure"
-              options={XY_EXPOSURE}
-              value={settings.xyExposure as (typeof XY_EXPOSURE)[number]}
-              format={(v) => `${((v / 48000) * 1000).toFixed(1)} ms`}
-              onChange={(xyExposure) => patch({ xyExposure })}
-            />
-          </Row>
           <Row label="Smoothing">
             <Slider
               label="Smoothing"

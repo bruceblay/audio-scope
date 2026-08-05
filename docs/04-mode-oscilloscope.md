@@ -121,27 +121,29 @@ the same beam physics as the main mode. `correlation` from the audio frame is
 shown as a readout beside it, and the graticule becomes square to match the plot
 area, with dashed diagonals marking where mono and out-of-phase content lie.
 
-### Exposure
+### The streaming beam (which replaced Exposure)
 
-X-Y needs an equivalent of the time base, and it is not obvious until you see it
-wrong: **how much of the record to draw per frame**.
+Each frame draws exactly the audio that arrived since the previous frame, and
+each sample is painted exactly once - the way the electron beam sweeps it
+exactly once. Persistence alone carries history. The previous frame's final
+beam position opens the next frame's path, so strokes connect across frame
+boundaries.
 
-Drawing the whole 4096-sample record is an 85 ms exposure at 48 kHz. On a moving
-figure that reads as two separate faults at once - the picture lags the sound by
-roughly half the window, and 85 ms of a changing figure overlaid on itself looks
-scribbled. Both were reported as separate problems; they were the same one.
+The design it replaced drew the most recent `exposure` samples every frame.
+At 60 fps roughly 16 ms of new audio arrives per frame, so a 43-85 ms
+exposure window repainted every stroke two to five times, each time slightly
+displaced as the figure animated, and the passes stacked additively into fog.
+Side-by-side with real oscilloscope-music footage the difference was not
+subtle: the reference drew crisp single strokes with invisible transits; ours
+drew a green cloud. No setting could fix it, because the redraw was
+structural. The Exposure control was removed with the redraw - in a streaming
+beam it has nothing left to mean.
 
-A real scope has no exposure. The beam is at one place *now* and the phosphor
-draws the tail. A short exposure plus persistence is that model. The analyser
-always returns the newest `record` samples, so taking the tail of it takes the
-present:
-
-```ts
-const from = record - exposure
-```
-
-Default 1024 samples, about 21 ms. Beam brightness stays constant across settings
-because the energy model already normalizes by point count.
+Streaming also exposed a dots-mode flaw the redraw had been hiding: honest
+dwell energies span orders of magnitude (a parked beam versus a fast
+transit), and linear normalization pushed every moving stroke below the lit
+threshold. The lattice now applies a cube-root brightness response -
+phosphor saturates - before quantizing.
 
 ### Smoothing
 

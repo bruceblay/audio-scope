@@ -149,9 +149,13 @@ export class CellGrid {
           if (a > cellMax) cellMax = a
           if (b > cellMax) cellMax = b
         }
-        const v = cellMax * norm
+        // Cube-root response: phosphor saturates, so a parked beam cannot
+        // out-shine every moving stroke into invisibility. Without this, the
+        // streaming X-Y path's honest dwell energies span three orders of
+        // magnitude and normalization pushed all strokes under the lit gate.
+        const v = Math.cbrt(cellMax * norm)
         // Quantized thresholds; the bottom one is the lit/unlit gate.
-        const level = v >= 0.55 ? 3 : v >= 0.22 ? 2 : v >= 0.06 ? 1 : 0
+        const level = v >= 0.72 ? 3 : v >= 0.45 ? 2 : v >= 0.2 ? 1 : 0
         if (level === 0) continue
 
         ctx.fillStyle = palette[level]
