@@ -24,7 +24,7 @@ type Editing = { mode: 'new' | 'rename'; id?: string }
  * that the tuning phase is done, kept for the next one. Flip to true to bring
  * the row back.
  */
-const SHOW_EXPORT = false
+const SHOW_EXPORT = true
 
 export function PresetMenu({
   userPresets,
