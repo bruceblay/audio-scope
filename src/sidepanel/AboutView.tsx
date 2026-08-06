@@ -27,7 +27,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
       <div className="about">
         <p>
           <strong>Audio Scope</strong> is a real oscilloscope and spectrum analyzer for
-          whatever a browser tab is playing. Audio passes through untouched — nothing is
+          whatever a browser tab is playing. Audio passes through untouched: nothing is
           added to it and nothing leaves your machine.
         </p>
 
@@ -48,7 +48,7 @@ export function AboutView({ onClose }: { onClose: () => void }) {
         </ol>
         <p className="about-note">
           When you move to a new tab, the panel follows and reconnects by itself wherever
-          Chrome allows. When Chrome wants a fresh click first, the panel says so — press
+          Chrome allows. When Chrome wants a fresh click first, the panel says so. Press
           the toolbar button (or Alt+A) and it takes it from there. Chrome withdraws capture rights
           whenever a tab navigates, and no extension can renew them without that click.
         </p>
@@ -86,14 +86,10 @@ export function AboutView({ onClose }: { onClose: () => void }) {
             trigger.
           </li>
           <li>
-            <strong>Halation</strong> fuses the overlapping passes the phosphor holds, the way
-            a real tube's glow does. If the trace looks scribbled over itself, raise it; at
-            zero every pass stays razor sharp.
-          </li>
-          <li>
-            <strong>Persistence</strong> is phosphor afterglow. <strong>Focus</strong> is
-            beam width, <strong>Intensity</strong> is brightness — two separate knobs, as on
-            the real thing.
+            <strong>Persistence</strong> is phosphor afterglow, <strong>Focus</strong> is the
+            beam's spot size, <strong>Intensity</strong> is beam energy, and{' '}
+            <strong>Halation</strong> is the soft halo around a bright trace. Four separate
+            knobs, as on the real thing, and each does exactly what its name says.
           </li>
         </ul>
 
@@ -121,6 +117,27 @@ export function AboutView({ onClose }: { onClose: () => void }) {
           <li>
             <strong>Smoothing</strong> is in octave fractions, so it smooths proportionally
             rather than by a fixed number of hertz.
+          </li>
+        </ul>
+
+        <h4>synth</h4>
+        <p>
+          The built-in synth exists so you always have a known signal to explore: hold a
+          note and the displays show exactly the waveform and spectrum it produces. Switch
+          it on at the bottom of the controls and play it from your computer keyboard, two
+          octaves: Z to M with S-D-G-H-J for sharps, Q to I above, minus and equals to
+          shift octaves.
+        </p>
+        <ul>
+          <li>
+            <strong>Latch</strong> (in the arpeggiator) holds notes after you release them,
+            so a pattern can run hands-free. Press a latched key again to take that note
+            back out.
+          </li>
+          <li>
+            <strong>Delay</strong> and <strong>Reverb</strong> switch off at zero Mix, and
+            both default there: a measurement probe should be dry until you decide
+            otherwise.
           </li>
         </ul>
 
