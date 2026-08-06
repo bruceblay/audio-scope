@@ -88,7 +88,7 @@ export const FACTORY_PRESETS: Preset[] = [
       hysteresis: 0.04,
       xyExposure: 1024,
       xySmoothing: 0.15,
-      beamFocus: 0.2,
+      beamFocus: 0.85,
       displayStyle: 'crt',
       phosphor: 'p31',
       halation: 0,
