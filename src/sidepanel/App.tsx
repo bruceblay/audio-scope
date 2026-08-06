@@ -410,6 +410,20 @@ export function App() {
 
   useEffect(() => () => synth.dispose(), [synth])
 
+  // A destabilized filter can leak NaN into the synth's feedback loops
+  // (delay, reverb, limiter), where it circulates forever - a transient
+  // glitch becoming a permanently dead synth. The engine reports non-finite
+  // frames; the synth rebuilds its stateful chain and plays on.
+  useEffect(() => {
+    engine.onNonFinite = () => {
+      console.info('[audio-scope] non-finite audio detected - rebuilding the synth chain')
+      synth.recover()
+    }
+    return () => {
+      engine.onNonFinite = null
+    }
+  }, [engine, synth])
+
   // Turning the synth on reveals its controls. The synth section is at the
   // bottom of the rail and the keyboard strip appears below it in the same
   // commit, so without this the new controls sit just out of view and the panel

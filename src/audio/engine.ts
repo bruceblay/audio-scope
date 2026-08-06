@@ -169,6 +169,15 @@ export class AudioEngine {
   }
 
   /**
+   * Fired (at most once per second) when the graph is producing non-finite
+   * samples. Real audio is always finite; NaN here means some node's state
+   * has been poisoned - in practice a destabilized biquad leaking into a
+   * feedback loop - and whoever owns stateful nodes should rebuild them.
+   */
+  onNonFinite: (() => void) | null = null
+  private lastNonFiniteAt = 0
+
+  /**
    * Route a captured stream into the graph. Playback to ctx.destination is
    * mandatory: tabCapture *redirects* the tab's audio, so without this the tab
    * goes silent.
@@ -327,6 +336,13 @@ export class AudioEngine {
     }
 
     const rms = Math.sqrt(sumSq / TIME_SIZE)
+    // Real audio is always finite. NaN here means poisoned node state
+    // somewhere upstream; report it (throttled) so stateful nodes get rebuilt
+    // instead of staying dead.
+    if (!Number.isFinite(rms) && f.time - this.lastNonFiniteAt > 1000) {
+      this.lastNonFiniteAt = f.time
+      this.onNonFinite?.()
+    }
     f.rms = rms
     f.peak = peak
     f.crest = rms > 1e-7 ? linearToDb(peak / rms) : 0

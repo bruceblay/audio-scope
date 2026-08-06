@@ -123,7 +123,7 @@ class Voice {
     // Q capped at 14 in the audio layer no matter what settings carry: still a
     // screaming resonance, but inside the region where swept biquads stay
     // numerically stable.
-    this.filter.Q.value = clamp(s.resonance, 0.5, 14)
+    this.filter.Q.value = clamp(s.resonance, 0.5, 10)
 
     this.amp = ctx.createGain()
     this.amp.gain.value = 0
@@ -204,7 +204,7 @@ class Voice {
     // Q moves slowly on purpose: frequency and Q automating fast together is
     // the classic biquad instability recipe.
     if (next.resonance !== prev.resonance)
-      this.filter.Q.setTargetAtTime(clamp(next.resonance, 0.5, 14), now, 0.08)
+      this.filter.Q.setTargetAtTime(clamp(next.resonance, 0.5, 10), now, 0.08)
 
     if (next.cutoff !== prev.cutoff || next.envAmount !== prev.envAmount || next.decay !== prev.decay)
       this.requestFilterReschedule()
@@ -361,11 +361,20 @@ export class Synth {
     return this.settings.arpOn && this.settings.arpLatch ? this.latched : this.held
   }
 
+  private destination: AudioNode | null = null
+
   connect(ctx: AudioContext, destination: AudioNode) {
     if (this.out) return
     this.ctx = ctx
+    this.destination = destination
     this.out = ctx.createGain()
     this.out.gain.value = 1
+    this.buildChain()
+  }
+
+  private buildChain() {
+    const ctx = this.ctx
+    if (!ctx || !this.out || !this.destination) return
     this.limiter = ctx.createDynamicsCompressor()
     // Limiter settings, not compressor settings: high threshold, hard knee,
     // maximum ratio, fastest attack. Idle until the mix actually gets hot.
@@ -381,8 +390,39 @@ export class Synth {
     this.out.connect(this.delayFx.input)
     this.delayFx.output.connect(this.reverbFx.input)
     this.reverbFx.output.connect(this.limiter)
-    this.limiter.connect(destination)
+    this.limiter.connect(this.destination)
     this.applyFx(this.settings)
+  }
+
+  /**
+   * Recover from non-finite audio in the graph.
+   *
+   * When a biquad destabilizes, Chrome resets the filter itself - that is
+   * what its "state is bad" warning means - but any NaN samples that escaped
+   * first are trapped forever in whatever feedback loops they reached: the
+   * delay line, the reverb's combs and allpasses, the limiter's envelope. A
+   * transient glitch became a permanently dead synth. Everything stateful
+   * downstream of the voices is disposable by design, so recovery is: kill
+   * the voices (their filters are suspect), tear out the chain, rebuild it.
+   * Under a second, and no stored settings are touched.
+   */
+  recover() {
+    if (!this.ctx || !this.out) return
+    this.stopSustained()
+    this.stopArp()
+    try {
+      this.out.disconnect()
+    } catch {
+      // Already disconnected.
+    }
+    this.delayFx?.dispose()
+    this.reverbFx?.dispose()
+    try {
+      this.limiter?.disconnect()
+    } catch {
+      // Already disconnected.
+    }
+    this.buildChain()
   }
 
   private applyFx(s: SynthSettings) {
