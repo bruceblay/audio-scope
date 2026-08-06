@@ -60,25 +60,25 @@ Visualize the audio of a browser tab in real time as an oscilloscope, spectrum a
 PERMISSION JUSTIFICATION: tabCapture
 ========================================================================
 
-Captures the audio stream of a tab so the extension can visualize it as an oscilloscope trace and spectrum. The audio passes through to the speakers unchanged; capture is the only way to read a tab's audio for analysis.
+Captures the audio stream of a tab so the extension can visualize it in real time as an oscilloscope trace and frequency spectrum. The audio passes through to the speakers unchanged. Capturing the tab is the only way to read its audio for analysis; nothing is recorded or transmitted.
 
 ========================================================================
 PERMISSION JUSTIFICATION: activeTab
 ========================================================================
 
-Chrome's tabCapture API requires the activeTab grant, given when the user clicks the extension's toolbar button on a tab. The extension can only ever access tabs the user has explicitly invoked it on.
+Chrome's tabCapture API requires the activeTab grant, which is given when the user clicks the extension's toolbar button on a tab. The extension can only ever access tabs the user has explicitly invoked it on, and access ends when the tab navigates or closes.
 
 ========================================================================
 PERMISSION JUSTIFICATION: sidePanel
 ========================================================================
 
-The extension's entire interface, the oscilloscope screen, analyzer, and controls, lives in Chrome's side panel so it can be watched alongside the tab that is playing.
+The extension's entire user interface (the oscilloscope screen, spectrum analyzer, and controls) lives in Chrome's side panel so it can be viewed alongside the tab whose audio is being visualized.
 
 ========================================================================
 PERMISSION JUSTIFICATION: storage
 ========================================================================
 
-Saves the user's control settings and their saved presets (chrome.storage.sync), so the instrument opens the way they left it. No audio and no browsing data is ever stored.
+Stores the user's control settings and their saved visualization presets via chrome.storage.sync, so the instrument opens the way they left it. No audio, browsing history, or personal data is ever stored.
 
 ========================================================================
 DATA USAGE DISCLOSURES (privacy tab)
