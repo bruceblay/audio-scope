@@ -62,7 +62,9 @@ export const DEFAULT_SYNTH: SynthSettings = {
   // the known answer - one spectral line, a perfect X-Y circle at 1:1.
   waveform: 'sine',
   octave: 0,
-  detune: 12,
+  // Zero detune: two oscillators in phase sum to one waveform, which is the
+  // honest signal to measure with. Detune is one knob away when wanted.
+  detune: 0,
   cutoff: 2200,
   resonance: 6,
   envAmount: 1.8,

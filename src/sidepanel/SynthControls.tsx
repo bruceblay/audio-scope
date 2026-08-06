@@ -139,7 +139,7 @@ export function SynthPanel({
               min={0}
               max={40}
               step={1}
-              reset={12}
+              reset={0}
               format={(v) => `${Math.round(v)}¢`}
               onChange={(detune) => patch({ detune })}
             />
