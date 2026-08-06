@@ -78,7 +78,7 @@ export const FACTORY_PRESETS: Preset[] = [
       channel: 'sum',
       bandwidth: 0,
       timePerDiv: 0.001,
-      voltsPerDiv: 0.2,
+      voltsPerDiv: 0.1,
       positionY: 0,
       positionX: 0.5,
       triggerMode: 'auto',
