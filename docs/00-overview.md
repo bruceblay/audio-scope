@@ -9,11 +9,19 @@ physical simulation, driven by real measurements of the signal.
 Two modes at launch:
 
 1. **Oscilloscope** (retro CRT) - a genuine triggered time-domain scope with
-   calibrated time/div and volt/div, plus X-Y (Lissajous) mode for the stereo
-   field.
-2. **Cymatics** - a real driven-membrane simulation. Detected pitch excites the
-   actual eigenmodes of a circular membrane or a square plate; sand particles
-   migrate to the nodal lines the way they do on a real Chladni plate.
+   calibrated time/div and volt/div, an analytic GPU beam, plus X-Y
+   (Lissajous) mode for the stereo field.
+2. **Analyzer** - spectrum curve, third-octave bars and waterfall spectrogram
+   on a shared log-frequency axis, with pink-noise tilt and honest
+   constant-Q smoothing.
+
+Both modes also render in a terminal-style **Dots** display, and a built-in
+synth provides a known signal to measure with.
+
+(A third mode, **Cymatics** - a driven-plate simulation exciting real Chladni
+eigenmodes - was designed, built and validated against Leissa, then shelved
+before launch as below the visual bar. The physics work is kept in
+[05-mode-cymatics.md](05-mode-cymatics.md).)
 
 ## Positioning
 
@@ -21,10 +29,9 @@ Free, no account, no telemetry. The selling point is craft: it looks and feels
 like a piece of hardware, and the physics underneath is honest. Most audio
 visualizers do `bass = average(bins 0..4)` and multiply a sine wave by it. This
 one does edge triggering, parabolic-interpolated FFT peak picking with harmonic
-product spectrum, Bessel-function mode shapes, and Lorentzian resonance
-response. That difference is visible: play a 440 Hz sine and the cymatic pattern
-is reproducible and specific. Sweep the frequency and the pattern snaps between
-mode families exactly where the resonances are.
+product spectrum, and an analytic integral for every pixel of beam light. That
+difference is visible: play a 440 Hz sine and the trace stands still while the
+readout says 440.
 
 ## Design goals
 
@@ -62,6 +69,6 @@ mode families exactly where the resonances are.
 | [02-reference-browser-fx.md](02-reference-browser-fx.md) | What we reuse from browser-fx, what we changed, and why |
 | [03-audio-engine.md](03-audio-engine.md) | Audio graph, analysers, measurement and pitch detection |
 | [04-mode-oscilloscope.md](04-mode-oscilloscope.md) | Scope physics, triggering, CRT rendering |
-| [05-mode-cymatics.md](05-mode-cymatics.md) | Membrane and plate eigenmodes, resonance, sand transport |
+| [05-mode-cymatics.md](05-mode-cymatics.md) | Membrane and plate eigenmodes (shelved mode; kept for the physics) |
 | [06-design-system.md](06-design-system.md) | Visual language and tokens |
 | [07-plan.md](07-plan.md) | Phased build plan and status |
