@@ -239,6 +239,11 @@ console.log('\n--- RECOVERY: rebuilding the graph preserves performance state --
     createOscillator() { return new Node() }
     createBiquadFilter() { return new Node() }
     createDelay() { return new Node() }
+    createConvolver() { return new Node() }
+    createBuffer(channels: number, length: number) {
+      const data = Array.from({ length: channels }, () => new Float32Array(length))
+      return { getChannelData: (channel: number) => data[channel] }
+    }
     createDynamicsCompressor() { return new Node() }
   }
 

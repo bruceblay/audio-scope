@@ -1,7 +1,6 @@
 /**
- * The synth's effects: a feedback delay (ported from browser-fx's shipped
- * createDelay) and a Schroeder reverb (built here after browser-fx's convolver
- * design hit a Chromium ConvolverNode bug; see ReverbFx).
+ * The synth's effects, ported from browser-fx's shipped createDelay and
+ * createReverb implementations.
  *
  * Both sit in the synth's private chain ahead of its limiter. Tab audio never
  * passes through them. Mix at zero is the off state: the panel stays minimal
@@ -71,110 +70,102 @@ export class DelayFx {
 }
 
 /**
- * A Schroeder reverb: four damped parallel comb filters into two series
- * allpasses, built entirely from DelayNodes, gains and one-pole damping.
+ * Fill one channel of browser-fx's noise impulse. Exported so its essential
+ * acoustic properties can be checked without pretending Node has Web Audio.
+ */
+export function fillReverbImpulse(
+  data: Float32Array,
+  roomSize: number,
+  random: () => number = Math.random,
+) {
+  const exponent = Math.max(1.5 - clamp(roomSize, 0, 1), 0.3)
+  for (let i = 0; i < data.length; i++) {
+    const remaining = (data.length - i) / data.length
+    data[i] = (random() * 2 - 1) * Math.pow(remaining, exponent)
+  }
+}
+
+/** browser-fx uses a real crossfade: fully wet contains no direct signal. */
+export function reverbMixGains(mix: number) {
+  const wet = clamp(mix, 0, 1)
+  return { wet, dry: 1 - wet }
+}
+
+/**
+ * browser-fx's stereo convolution reverb.
  *
- * This replaced a port of browser-fx's convolver reverb after a hunt: with the
- * convolver in the synth chain, every oscillator waveform played and displayed
- * as a sine. Bisecting the chain offline proved every other node transparent
- * (a sawtooth kept its textbook -6/-9.5/-12/-13.9 dB harmonics through voices,
- * mix, filter, delay and limiter), and this Chrome build's ConvolverNode was
- * separately shown to wedge a graph outright in exactly the parallel wet/dry
- * topology a reverb needs. No convolver, no wedge - and the classic network is
- * more honest anyway: decay here is literal RT60 (the comb feedbacks follow
- * g = 10^(-3 d / RT60)), not a noise-buffer exponent.
+ * The short-lived Schroeder replacement used only four combs and two mono
+ * allpasses. A sustained synth note repeatedly reinforced those comb
+ * frequencies, producing the narrow, shrill ringing reported in practice.
+ * A finite noise impulse has no feedback path and no fixed resonant pitch.
+ * Size controls the envelope shape; Decay controls the impulse duration.
  */
 export class ReverbFx {
   readonly input: GainNode
   readonly output: GainNode
+  private readonly convolver: ConvolverNode
   private readonly wet: GainNode
   private readonly dry: GainNode
-  private readonly combDelays: DelayNode[] = []
-  private readonly combGains: GainNode[] = []
   private readonly ctx: AudioContext
-
-  /** Freeverb's comb tunings, in seconds at their reference size. */
-  private static readonly COMBS = [0.0297, 0.0371, 0.0411, 0.0437]
-  private static readonly ALLPASSES = [0.005, 0.0017]
+  private impulseKey = ''
+  private rebuildTimer: number | null = null
 
   constructor(ctx: AudioContext) {
     this.ctx = ctx
     this.input = ctx.createGain()
     this.output = ctx.createGain()
+    this.convolver = ctx.createConvolver()
     this.wet = ctx.createGain()
     this.dry = ctx.createGain()
     this.wet.gain.value = 0
     this.dry.gain.value = 1
 
+    this.input.connect(this.convolver)
     this.input.connect(this.dry)
+    this.convolver.connect(this.wet)
+    this.wet.connect(this.output)
     this.dry.connect(this.output)
 
-    // Parallel combs, each with a damping lowpass inside its loop so high
-    // frequencies die faster than lows, as they do in a room.
-    const combSum = ctx.createGain()
-    combSum.gain.value = 0.25
-    for (const seconds of ReverbFx.COMBS) {
-      const delay = ctx.createDelay(0.2)
-      delay.delayTime.value = seconds
-      const damp = ctx.createBiquadFilter()
-      damp.type = 'lowpass'
-      damp.frequency.value = 4500
-      const fb = ctx.createGain()
-      fb.gain.value = 0.7
-      this.input.connect(delay)
-      delay.connect(damp)
-      damp.connect(fb)
-      fb.connect(delay)
-      delay.connect(combSum)
-      this.combDelays.push(delay)
-      this.combGains.push(fb)
-    }
-
-    // Series allpasses smear the comb resonances into a diffuse tail:
-    // y = -g x + x[n-t] + g y[n-t].
-    let stage: AudioNode = combSum
-    for (const seconds of ReverbFx.ALLPASSES) {
-      const sum = ctx.createGain()
-      const delay = ctx.createDelay(0.05)
-      delay.delayTime.value = seconds
-      const ff = ctx.createGain()
-      ff.gain.value = -0.7
-      const fbg = ctx.createGain()
-      fbg.gain.value = 0.7
-      const out = ctx.createGain()
-      stage.connect(sum)
-      stage.connect(ff)
-      ff.connect(out)
-      sum.connect(delay)
-      delay.connect(out)
-      out.connect(fbg)
-      fbg.connect(sum)
-      stage = out
-    }
-    stage.connect(this.wet)
-    this.wet.connect(this.output)
+    this.buildImpulse(0.7, 2)
   }
 
   apply(size: number, decay: number, mix: number) {
     const now = this.ctx.currentTime
-    this.wet.gain.setTargetAtTime(clamp(mix, 0, 1), now, RAMP)
-    this.dry.gain.setTargetAtTime(1 - clamp(mix, 0, 1) * 0.5, now, RAMP)
+    const gains = reverbMixGains(mix)
+    this.wet.gain.setTargetAtTime(gains.wet, now, RAMP)
+    this.dry.gain.setTargetAtTime(gains.dry, now, RAMP)
 
-    // Size scales the comb lengths (a bigger room has longer reflections);
-    // decay sets each comb's feedback from the RT60 relation, so the Decay
-    // knob's seconds are the seconds you hear.
-    const scale = 0.6 + clamp(size, 0, 1) * 0.9
-    const rt60 = clamp(decay, 0.1, 10)
-    for (let i = 0; i < this.combDelays.length; i++) {
-      const d = ReverbFx.COMBS[i] * scale
-      this.combDelays[i].delayTime.setTargetAtTime(d, now, RAMP)
-      const g = Math.min(0.93, Math.pow(10, (-3 * d) / rt60))
-      this.combGains[i].gain.setTargetAtTime(g, now, RAMP)
-    }
+    // An impulse is a buffer rather than an AudioParam. Match browser-fx's
+    // rebuild semantics, but debounce a drag so we allocate once when the knob
+    // settles instead of several seconds of stereo data on every pointer move.
+    const key = this.key(size, decay)
+    if (key === this.impulseKey) return
+    if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer)
+    this.rebuildTimer = window.setTimeout(() => {
+      this.rebuildTimer = null
+      this.buildImpulse(size, decay)
+    }, 150)
+  }
+
+  private key(size: number, decay: number) {
+    return `${clamp(size, 0, 1).toFixed(2)}:${clamp(decay, 0.1, 10).toFixed(1)}`
+  }
+
+  private buildImpulse(size: number, decay: number) {
+    const key = this.key(size, decay)
+    if (key === this.impulseKey) return
+    this.impulseKey = key
+
+    const length = Math.max(1, Math.floor(this.ctx.sampleRate * clamp(decay, 0.1, 10)))
+    const impulse = this.ctx.createBuffer(2, length, this.ctx.sampleRate)
+    fillReverbImpulse(impulse.getChannelData(0), size)
+    fillReverbImpulse(impulse.getChannelData(1), size)
+    this.convolver.buffer = impulse
   }
 
   dispose() {
-    for (const n of [this.input, this.output, this.wet, this.dry, ...this.combDelays, ...this.combGains]) {
+    if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer)
+    for (const n of [this.input, this.output, this.convolver, this.wet, this.dry]) {
       try {
         n.disconnect()
       } catch {

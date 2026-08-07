@@ -376,26 +376,24 @@ limiter (threshold -3 dB, hard knee, ratio 20:1, 2 ms attack) - what every
 synth does about unbounded resonance and polyphony. The limiter touches only
 the synth; tab audio never passes through it.
 
-**Effects (2026-08).** A feedback delay ported verbatim from browser-fx's
-shipped createDelay, and a Schroeder reverb (four damped parallel combs into
-two series allpasses, all DelayNodes and gains). They sit in the synth's
-private chain ahead of the limiter - tab audio never passes through them -
-and mix-at-zero is the off state: no toggles, dry by default, because a probe
-with reverb baked in would smear the waveforms it exists to show.
+**Effects (2026-08).** The feedback delay and stereo convolution reverb follow
+browser-fx's shipped createDelay and createReverb. They sit in the synth's
+private chain ahead of the limiter - tab audio never passes through them - and
+mix-at-zero is the off state: no toggles, dry by default, because a probe with
+reverb baked in would smear the waveforms it exists to show. Reverb Size shapes
+the noise impulse's decay envelope, Decay sets its duration, and Mix is the same
+linear wet/dry crossfade as browser-fx. Impulse rebuilds debounce until a knob
+drag settles.
 
-The reverb was first ported from browser-fx's convolver design and had to be
-replaced: with a ConvolverNode in the chain, every oscillator waveform played
-and displayed as a sine. The offline bisect that convicted it is worth
-remembering as method - stub the suspect, measure the rest. With the
-convolver stubbed, a sawtooth kept its textbook -6/-9.5/-12/-13.9 dB
-harmonic ladder through voices, mix, filter, delay and limiter, proving every
-line of our code transparent; separately, this Chrome build's ConvolverNode
-wedged an offline graph outright in exactly the parallel wet/dry topology a
-reverb needs (inline it rendered fine). browser-fx runs its convolver in an
-offscreen document and does not hit this. The Schroeder network needs no
-convolver, and its Decay knob is literal RT60 (comb feedback
-g = 10^(-3d/RT60)) rather than a noise-buffer exponent - more honest as well
-as safe.
+The convolver was temporarily replaced with a reduced Schroeder network after
+an offline test appeared to show Chromium wedging on the parallel wet/dry graph.
+That diagnosis was wrong, and the replacement was audibly much worse: four combs
+and two mono allpasses let sustained notes reinforce a few fixed frequencies into
+a shrill metallic ring. The apparent ConvolverNode failure was the test harness
+advancing virtual time and dumping the DOM before offline audio rendering had
+finished in wall-clock time. `npm run test:fx-browser` now launches real Chromium
+and polls it over the DevTools protocol; the production stereo graph completes,
+decays, stays finite and shows no correlation at the discarded comb delays.
 
 The related bug is worth remembering: the arpeggiator restarted its interval timer
 on *every* settings update. A knob drag patches settings dozens of times a second

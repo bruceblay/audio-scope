@@ -403,8 +403,7 @@ export class Synth {
    *
    * When a biquad destabilizes, Chrome resets the filter itself - that is
    * what its "state is bad" warning means - but any NaN samples that escaped
-   * first are trapped forever in whatever feedback loops they reached: the
-   * delay line, the reverb's combs and allpasses, the limiter's envelope. A
+   * first can poison the delay's feedback line and downstream limiter state. A
    * transient glitch became a permanently dead synth. Everything stateful
    * downstream of the voices is disposable by design, so recovery is: kill
    * the voices (their filters are suspect), tear out the chain, rebuild it,
