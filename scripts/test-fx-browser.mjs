@@ -1,4 +1,4 @@
-/** Bundle and render the production effects graph in a real headless Chrome. */
+/** Bundle and render a production Web Audio graph in a real headless Chrome. */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -27,7 +27,7 @@ try {
   const script = join(directory, 'test.js')
   const html = join(directory, 'test.html')
   buildSync({
-    entryPoints: [process.env.FX_BROWSER_ENTRY ?? 'test/fx.browser.test.ts'],
+    entryPoints: [process.argv[2] ?? process.env.FX_BROWSER_ENTRY ?? 'test/fx.browser.test.ts'],
     bundle: true,
     format: 'iife',
     outfile: script,

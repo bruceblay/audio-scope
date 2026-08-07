@@ -8,7 +8,16 @@
  *
  * Run: npm run test:synth
  */
-import { DEFAULT_SYNTH, Synth, arpSequence, midiToHz, midiToName } from '../src/audio/synth'
+import {
+  DEFAULT_SYNTH,
+  Synth,
+  arpSequence,
+  midiToHz,
+  midiToName,
+  migrateSynthSettings,
+  oscillatorMixGains,
+  oscillatorPitches,
+} from '../src/audio/synth'
 import { KEYS, OCTAVE_DOWN, OCTAVE_UP } from '../src/ui/Keyboard'
 
 let failures = 0
@@ -44,6 +53,42 @@ console.log('\n--- TUNING: equal temperament, A440 ---')
     worst = Math.max(worst, Math.abs(midiToHz(m + 12) / midiToHz(m) - 2))
   }
   check('an octave is exactly 2x', worst < 1e-12, `worst deviation ${worst.toExponential(1)}`)
+}
+
+// --- Oscillators ----------------------------------------------------------
+console.log('\n--- OSCILLATORS: B is an independent musical source ---')
+{
+  const pitch = oscillatorPitches(69, 12, 20)
+  check(
+    'B coarse tuning reaches an exact octave',
+    Math.abs(pitch.aHz - 440) < 1e-9 && Math.abs(pitch.bHz - 880) < 1e-9,
+    `${pitch.aHz.toFixed(1)} / ${pitch.bHz.toFixed(1)} Hz`,
+  )
+  check(
+    'spread remains symmetric around both pitches',
+    pitch.aDetune === -10 && pitch.bDetune === 10,
+    `${pitch.aDetune}c / +${pitch.bDetune}c`,
+  )
+
+  const balance = oscillatorMixGains(0.25)
+  check(
+    'A/B balance preserves unity gain',
+    balance.a === 0.75 && balance.b === 0.25 && balance.a + balance.b === 1,
+    `A ${balance.a}, B ${balance.b}`,
+  )
+
+  const old = migrateSynthSettings({ waveform: 'sawtooth', detune: 14 })
+  const modern = migrateSynthSettings({ waveform: 'sawtooth', oscBWaveform: 'square' })
+  check(
+    'legacy settings copy their waveform to B',
+    old?.oscBWaveform === 'sawtooth',
+    `old saw unison became A saw / B ${old?.oscBWaveform}`,
+  )
+  check(
+    'explicit B waveform survives migration',
+    modern?.oscBWaveform === 'square',
+    `B stayed ${modern?.oscBWaveform}`,
+  )
 }
 
 // --- Keyboard layout -------------------------------------------------------
@@ -191,6 +236,7 @@ console.log('\n--- DEFAULTS: sane and quiet on arrival ---')
   check('starts disabled', d.enabled === false, 'an extension that makes noise on open is hostile')
   check('level leaves headroom', d.level > 0 && d.level <= 0.7, `${d.level}`)
   check('cutoff is audible', d.cutoff > 200 && d.cutoff < 20000, `${d.cutoff} Hz`)
+  check('filter defaults to the transparent 12 dB path', d.filterSlope === 12, `${d.filterSlope} dB/oct`)
   check('envelope times are positive', d.attack > 0 && d.release > 0, `A ${d.attack}s R ${d.release}s`)
   check('sustain is a level, not a time', d.sustain >= 0 && d.sustain <= 1, `${d.sustain}`)
   check(

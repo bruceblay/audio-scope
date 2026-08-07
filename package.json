@@ -22,6 +22,7 @@
     "test:meters": "esbuild test/meters.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/meters.test.mjs && node node_modules/.cache/meters.test.mjs",
     "test:fx": "esbuild test/fx.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/fx.test.mjs && node node_modules/.cache/fx.test.mjs",
     "test:fx-browser": "node scripts/test-fx-browser.mjs",
+    "test:synth-browser": "node scripts/test-fx-browser.mjs test/synth.browser.test.ts",
     "icons": "node scripts/make-icons.mjs",
     "test:synth": "esbuild test/synth.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/synth.test.mjs && node node_modules/.cache/synth.test.mjs",
     "test:ui": "esbuild test/ui.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/ui.test.mjs && node node_modules/.cache/ui.test.mjs",

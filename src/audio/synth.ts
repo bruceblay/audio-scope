@@ -18,16 +18,26 @@ import { DelayFx, ReverbFx } from './fx'
 
 export type Waveform = OscillatorType
 export type ArpMode = 'up' | 'down' | 'updown' | 'random'
+export type FilterSlope = 12 | 24
 
 export interface SynthSettings {
   enabled: boolean
+  /** Oscillator A waveform; kept as `waveform` for stored-settings compatibility. */
   waveform: Waveform
+  /** Oscillator B can supply a different harmonic source. */
+  oscBWaveform: Waveform
+  /** Coarse tuning of oscillator B relative to the played note. */
+  oscBSemitones: number
+  /** Crossfade from oscillator A (0) to B (1). */
+  oscMix: number
   /** Spread between the two oscillators, in cents. */
   detune: number
   /** Filter cutoff in Hz. */
   cutoff: number
   /** Filter Q. */
   resonance: number
+  /** Low-pass rolloff in dB per octave. */
+  filterSlope: FilterSlope
   /** How far the envelope opens the filter, in octaves above cutoff. */
   envAmount: number
   attack: number
@@ -59,11 +69,15 @@ export const DEFAULT_SYNTH: SynthSettings = {
   // Sine, because the synth is test equipment first: a sine is the signal with
   // the known answer - one spectral line, a perfect X-Y circle at 1:1.
   waveform: 'sine',
+  oscBWaveform: 'sine',
+  oscBSemitones: 0,
+  oscMix: 0.5,
   // Zero detune: two oscillators in phase sum to one waveform, which is the
   // honest signal to measure with. Detune is one knob away when wanted.
   detune: 0,
   cutoff: 2200,
   resonance: 6,
+  filterSlope: 12,
   envAmount: 1.8,
   attack: 0.01,
   decay: 0.18,
@@ -90,16 +104,42 @@ export const DEFAULT_SYNTH: SynthSettings = {
 /** Equal temperament, A440. MIDI 69 is A4. */
 export const midiToHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12)
 
+/** Pitch and balance are pure so stored-setting migrations and DSP tests agree with voices. */
+export function oscillatorPitches(midi: number, bSemitones: number, spreadCents: number) {
+  return {
+    aHz: midiToHz(midi),
+    bHz: midiToHz(midi + bSemitones),
+    aDetune: -spreadCents / 2,
+    bDetune: spreadCents / 2,
+  }
+}
+
+export function oscillatorMixGains(mix: number) {
+  const b = clamp(mix, 0, 1)
+  return { a: 1 - b, b }
+}
+
+/** Preserve the old unison sound when loading settings saved before Osc B was exposed. */
+export function migrateSynthSettings(saved?: Partial<SynthSettings>): Partial<SynthSettings> | undefined {
+  if (!saved || 'oscBWaveform' in saved || saved.waveform === undefined) return saved
+  return { ...saved, oscBWaveform: saved.waveform }
+}
+
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 export const midiToName = (midi: number) =>
   NOTE_NAMES[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1)
 
-/** One sounding note. Two detuned oscillators into a filter into a VCA. */
+/** One sounding note. Two independently voiced oscillators into a selectable-slope filter and VCA. */
 class Voice {
   private readonly oscA: OscillatorNode
   private readonly oscB: OscillatorNode
+  private readonly oscAGain: GainNode
+  private readonly oscBGain: GainNode
   private readonly mix: GainNode
-  private readonly filter: BiquadFilterNode
+  private readonly filterA: BiquadFilterNode
+  private readonly filterB: BiquadFilterNode
+  private readonly slope12: GainNode
+  private readonly slope24: GainNode
   private readonly amp: GainNode
   private stopped = false
   /** When the note began, so a live edit knows which envelope stage it is in. */
@@ -113,43 +153,63 @@ class Voice {
     s: SynthSettings,
   ) {
     const now = ctx.currentTime
-    const hz = midiToHz(midi)
+    const pitch = oscillatorPitches(midi, s.oscBSemitones, s.detune)
     this.startAt = now
     this.s = s
 
-    this.filter = ctx.createBiquadFilter()
-    this.filter.type = 'lowpass'
+    this.filterA = ctx.createBiquadFilter()
+    this.filterB = ctx.createBiquadFilter()
+    this.filterA.type = 'lowpass'
+    this.filterB.type = 'lowpass'
     // Q capped at 10 in the audio layer no matter what settings carry: still a
     // screaming resonance, but inside the region where swept biquads stay
-    // numerically stable.
-    this.filter.Q.value = clamp(s.resonance, 0.5, 10)
+    // numerically stable. The second stage stays neutral: applying resonance
+    // twice would square the peak and immediately drive the limiter.
+    this.filterA.Q.value = clamp(s.resonance, 0.5, 10)
+    this.filterB.Q.value = Math.SQRT1_2
+
+    // Both slopes remain connected and a short gain crossfade selects one.
+    // That makes slope changes live without disconnect clicks or stranded
+    // AudioNodes: 12 dB exits after stage A; 24 dB passes through stage B too.
+    this.slope12 = ctx.createGain()
+    this.slope24 = ctx.createGain()
+    this.slope12.gain.value = s.filterSlope === 12 ? 1 : 0
+    this.slope24.gain.value = s.filterSlope === 24 ? 1 : 0
 
     this.amp = ctx.createGain()
     this.amp.gain.value = 0
 
-    // Half gain per oscillator: native oscillators are full scale, so the
-    // detuned pair summed straight into the filter peaked at 2.0 FS before the
-    // level control ever saw it - the root of the audible clipping.
+    // The A/B crossfade always sums to one. At 50/50 this is exactly the old
+    // half-gain unison pair; at either edge one oscillator remains full scale.
     this.mix = ctx.createGain()
-    this.mix.gain.value = 0.5
-    this.mix.connect(this.filter)
+    this.mix.gain.value = 1
+    this.oscAGain = ctx.createGain()
+    this.oscBGain = ctx.createGain()
+    const balance = oscillatorMixGains(s.oscMix)
+    this.oscAGain.gain.value = balance.a
+    this.oscBGain.gain.value = balance.b
+    this.oscAGain.connect(this.mix)
+    this.oscBGain.connect(this.mix)
+    this.mix.connect(this.filterA)
 
     this.oscA = ctx.createOscillator()
     this.oscB = ctx.createOscillator()
-    for (const [osc, sign] of [
-      [this.oscA, -1],
-      [this.oscB, 1],
-    ] as const) {
-      osc.type = s.waveform
-      osc.frequency.value = hz
-      // Two oscillators a few cents apart is the cheapest way to sound like an
-      // instrument rather than a test tone, and at detune 0 they simply sum.
-      osc.detune.value = (sign * s.detune) / 2
-      osc.connect(this.mix)
-      osc.start(now)
-    }
+    this.oscA.type = s.waveform
+    this.oscA.frequency.value = pitch.aHz
+    this.oscA.detune.value = pitch.aDetune
+    this.oscA.connect(this.oscAGain)
+    this.oscB.type = s.oscBWaveform
+    this.oscB.frequency.value = pitch.bHz
+    this.oscB.detune.value = pitch.bDetune
+    this.oscB.connect(this.oscBGain)
+    this.oscA.start(now)
+    this.oscB.start(now)
 
-    this.filter.connect(this.amp)
+    this.filterA.connect(this.slope12)
+    this.filterA.connect(this.filterB)
+    this.filterB.connect(this.slope24)
+    this.slope12.connect(this.amp)
+    this.slope24.connect(this.amp)
     this.amp.connect(destination)
 
     // Filter envelope: opens `envAmount` octaves above the cutoff on attack and
@@ -163,7 +223,8 @@ class Voice {
     // sweep is exactly the "fast parameter automation" that destabilizes
     // Chrome's biquad, which then rings a pure sine at its own frequency no
     // matter what waveform feeds it.
-    this.filter.frequency.value = s.cutoff
+    this.filterA.frequency.value = s.cutoff
+    this.filterB.frequency.value = s.cutoff
     this.scheduleFilter(now)
 
     // Amp envelope. Ramps rather than steps: a step on a gain node is a click.
@@ -187,7 +248,15 @@ class Voice {
 
     if (next.waveform !== prev.waveform) {
       this.oscA.type = next.waveform
-      this.oscB.type = next.waveform
+    }
+    if (next.oscBWaveform !== prev.oscBWaveform) this.oscB.type = next.oscBWaveform
+    if (next.oscBSemitones !== prev.oscBSemitones) {
+      this.oscB.frequency.setTargetAtTime(midiToHz(this.midi + next.oscBSemitones), now, 0.01)
+    }
+    if (next.oscMix !== prev.oscMix) {
+      const balance = oscillatorMixGains(next.oscMix)
+      this.oscAGain.gain.setTargetAtTime(balance.a, now, 0.01)
+      this.oscBGain.gain.setTargetAtTime(balance.b, now, 0.01)
     }
     if (next.detune !== prev.detune) {
       // Short glide rather than a step: a jump in detune is an audible click on
@@ -195,10 +264,14 @@ class Voice {
       this.oscA.detune.setTargetAtTime(-next.detune / 2, now, 0.01)
       this.oscB.detune.setTargetAtTime(next.detune / 2, now, 0.01)
     }
+    if (next.filterSlope !== prev.filterSlope) {
+      this.slope12.gain.setTargetAtTime(next.filterSlope === 12 ? 1 : 0, now, 0.01)
+      this.slope24.gain.setTargetAtTime(next.filterSlope === 24 ? 1 : 0, now, 0.01)
+    }
     // Q moves slowly on purpose: frequency and Q automating fast together is
     // the classic biquad instability recipe.
     if (next.resonance !== prev.resonance)
-      this.filter.Q.setTargetAtTime(clamp(next.resonance, 0.5, 10), now, 0.08)
+      this.filterA.Q.setTargetAtTime(clamp(next.resonance, 0.5, 10), now, 0.08)
 
     if (
       next.cutoff !== prev.cutoff ||
@@ -250,25 +323,26 @@ class Voice {
     // swept toward Nyquist is the least numerically stable place a biquad can
     // be, and is where Chrome's "state is bad" warning lives.
     const open = clamp(s.cutoff * Math.pow(2, s.envAmount), 20, this.ctx.sampleRate * 0.35)
-    const freq = this.filter.frequency
-
-    freq.cancelScheduledValues(now)
-    freq.setValueAtTime(freq.value, now)
-    // Exponential approaches only, never linear ramps: setTargetAtTime moves
-    // the frequency asymptotically, which is far gentler on the biquad's
-    // coefficient interpolation than a linear race to the target. The attack
-    // approach uses a third of the attack time as its constant, so it reaches
-    // ~95% of open by the attack's end - the same audible shape without the
-    // instability-triggering sweep.
-    if (now < attackEnd) {
-      // 8 ms floor on the approach constant: below that, a high-Q sweep is
-      // fast enough to destabilize the coefficient interpolation.
-      freq.setTargetAtTime(open, now, Math.max(0.008, s.attack / 3))
-      freq.setTargetAtTime(s.cutoff, attackEnd, decay)
-    } else {
-      // Four time constants is within 2% of the target, so past that the decay
-      // has effectively finished and there is no sweep left to preserve.
-      freq.setTargetAtTime(s.cutoff, now, now > attackEnd + 4 * decay ? 0.08 : decay)
+    for (const filter of [this.filterA, this.filterB]) {
+      const freq = filter.frequency
+      freq.cancelScheduledValues(now)
+      freq.setValueAtTime(freq.value, now)
+      // Exponential approaches only, never linear ramps: setTargetAtTime moves
+      // the frequency asymptotically, which is far gentler on the biquad's
+      // coefficient interpolation than a linear race to the target. The attack
+      // approach uses a third of the attack time as its constant, so it reaches
+      // ~95% of open by the attack's end - the same audible shape without the
+      // instability-triggering sweep.
+      if (now < attackEnd) {
+        // 8 ms floor on the approach constant: below that, a high-Q sweep is
+        // fast enough to destabilize the coefficient interpolation.
+        freq.setTargetAtTime(open, now, Math.max(0.008, s.attack / 3))
+        freq.setTargetAtTime(s.cutoff, attackEnd, decay)
+      } else {
+        // Four time constants is within 2% of the target, so past that the decay
+        // has effectively finished and the glide can switch to a fast constant.
+        freq.setTargetAtTime(s.cutoff, now, now > attackEnd + 4 * decay ? 0.08 : decay)
+      }
     }
   }
 
@@ -325,7 +399,18 @@ class Voice {
   }
 
   private disconnect() {
-    for (const node of [this.oscA, this.oscB, this.mix, this.filter, this.amp]) {
+    for (const node of [
+      this.oscA,
+      this.oscB,
+      this.oscAGain,
+      this.oscBGain,
+      this.mix,
+      this.filterA,
+      this.filterB,
+      this.slope12,
+      this.slope24,
+      this.amp,
+    ]) {
       try {
         node.disconnect()
       } catch {

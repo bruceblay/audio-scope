@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { ArpMode, SynthSettings, Waveform } from '../audio/synth'
+import type { ArpMode, FilterSlope, SynthSettings, Waveform } from '../audio/synth'
 import { Segmented, Stepper } from '../ui/controls'
 import { Knob } from '../ui/Knob'
 
@@ -31,6 +31,12 @@ const fromKnob = (t: number) => HZ_MIN * Math.pow(HZ_MAX / HZ_MIN, t)
 
 const formatHz = (hz: number) => (hz >= 1000 ? `${(hz / 1000).toFixed(1)}k` : `${Math.round(hz)}`)
 const secs = (v: number) => (v < 1 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(2)}s`)
+const WAVE_OPTIONS: readonly { value: Waveform; label: string }[] = [
+  { value: 'sine', label: 'Sin' },
+  { value: 'triangle', label: 'Tri' },
+  { value: 'sawtooth', label: 'Saw' },
+  { value: 'square', label: 'Sqr' },
+]
 
 /** A captioned cluster of controls, sized to its contents so banks share a row. */
 function Bank({ name, children }: { name: string; children: ReactNode }) {
@@ -108,18 +114,13 @@ export function SynthPanel({
 
       {settings.enabled && (
         <div className="banks">
-          <Bank name="Osc">
+          <Bank name="Osc A">
             <Cell name="Wave">
               <Segmented<Waveform>
-                label="Waveform"
+                label="Oscillator A waveform"
                 value={settings.waveform}
                 onChange={(waveform) => patch({ waveform })}
-                options={[
-                  { value: 'sine', label: 'Sin' },
-                  { value: 'triangle', label: 'Tri' },
-                  { value: 'sawtooth', label: 'Saw' },
-                  { value: 'square', label: 'Sqr' },
-                ]}
+                options={WAVE_OPTIONS}
               />
             </Cell>
             <Cell name="Octave">
@@ -131,10 +132,29 @@ export function SynthPanel({
                 onChange={onOctave}
               />
             </Cell>
-            {/* Two oscillators a few cents apart. At zero they sum to one
-                waveform, which is the setting to measure with. */}
+          </Bank>
+
+          <Bank name="Osc B">
+            <Cell name="Wave">
+              <Segmented<Waveform>
+                label="Oscillator B waveform"
+                value={settings.oscBWaveform}
+                onChange={(oscBWaveform) => patch({ oscBWaveform })}
+                options={WAVE_OPTIONS}
+              />
+            </Cell>
             <Knob
-              label="Detune"
+              label="Tune"
+              value={settings.oscBSemitones}
+              min={-24}
+              max={24}
+              step={1}
+              reset={0}
+              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}st`}
+              onChange={(oscBSemitones) => patch({ oscBSemitones })}
+            />
+            <Knob
+              label="Spread"
               value={settings.detune}
               min={0}
               max={40}
@@ -143,9 +163,30 @@ export function SynthPanel({
               format={(v) => `${Math.round(v)}¢`}
               onChange={(detune) => patch({ detune })}
             />
+            <Knob
+              label="Mix"
+              value={settings.oscMix}
+              min={0}
+              max={1}
+              step={0.01}
+              reset={0.5}
+              format={(v) => `B ${Math.round(v * 100)}%`}
+              onChange={(oscMix) => patch({ oscMix })}
+            />
           </Bank>
 
           <Bank name="Filter">
+            <Cell name="Slope">
+              <Segmented<'12' | '24'>
+                label="Filter slope"
+                value={`${settings.filterSlope}` as '12' | '24'}
+                onChange={(value) => patch({ filterSlope: Number(value) as FilterSlope })}
+                options={[
+                  { value: '12', label: '12' },
+                  { value: '24', label: '24' },
+                ]}
+              />
+            </Cell>
             <Knob
               label="Cutoff"
               value={toKnob(settings.cutoff)}

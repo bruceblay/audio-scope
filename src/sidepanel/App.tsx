@@ -9,7 +9,12 @@ import {
   type TabTarget,
 } from '../audio/capture'
 import { AudioEngine } from '../audio/engine'
-import { DEFAULT_SYNTH, Synth, type SynthSettings } from '../audio/synth'
+import {
+  DEFAULT_SYNTH,
+  Synth,
+  migrateSynthSettings,
+  type SynthSettings,
+} from '../audio/synth'
 import {
   DEFAULT_ANALYZER_SETTINGS,
   type AnalyzerReadout,
@@ -620,7 +625,10 @@ export function App() {
       if (typeof saved.octave === 'number') setOctave(saved.octave)
       // Enabled is deliberately not restored: an extension that starts making
       // noise on open is hostile, however the setting was left.
-      setSynthSettings((prev) => ({ ...adopt(prev, saved.synth, was?.synth), enabled: false }))
+      setSynthSettings((prev) => ({
+        ...adopt(prev, migrateSynthSettings(saved.synth), was?.synth),
+        enabled: false,
+      }))
       // The dots style shipped briefly as 'tui' and then 'text'; stored
       // settings from those windows coerce forward instead of silently falling
       // to CRT.

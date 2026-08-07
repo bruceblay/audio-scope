@@ -376,6 +376,25 @@ limiter (threshold -3 dB, hard knee, ratio 20:1, 2 ms attack) - what every
 synth does about unbounded resonance and polyphony. The limiter touches only
 the synth; tab audio never passes through it.
 
+**Two-oscillator voice (2026-08).** The original graph already instantiated two
+oscillators, but they shared waveform and pitch and could only move symmetrically
+around the note with Detune. It was a unison spread disguised as a full oscillator
+section. Osc A now keeps the original waveform control while Osc B has its own
+waveform, coarse tuning from -24 to +24 semitones, and A/B mix; Spread remains a
+symmetric fine detune. At the defaults both oscillators are sine, unison, and
+50/50, which reproduces the original unity-gain signal exactly. Stored settings
+from before the split copy their old waveform onto B so reloading does not turn a
+saved saw unison into saw plus sine.
+
+**Filter slope (2026-08).** Each voice now contains two native low-pass stages.
+The 12 dB path exits after the first; the 24 dB path continues through a neutral
+second stage. Complementary 10 ms gain ramps select the path, keeping slope live
+without reconnect clicks. Resonance remains on the first filter only—applying the
+same high Q twice would square the peak and slam the output limiter. A real
+Chromium offline render verifies that a sine one octave above cutoff is roughly
+12 dB quieter through the added stage and that a live 12-to-24 switch settles to
+the same response as starting in 24 dB mode.
+
 **Effects (2026-08).** The feedback delay and stereo convolution reverb follow
 browser-fx's shipped createDelay and createReverb. They sit in the synth's
 private chain ahead of the limiter - tab audio never passes through them - and
