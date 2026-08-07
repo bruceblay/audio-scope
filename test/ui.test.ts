@@ -1,5 +1,5 @@
 /** Small state-machine regressions that do not need a browser DOM. */
-import { HeldKeyboardNotes } from '../src/ui/Keyboard'
+import { HeldKeyboardNotes, HeldPointerNotes } from '../src/ui/Keyboard'
 import { applyPreset, type Preset } from '../src/sidepanel/presets'
 import { resolveCaptureTarget, type TabTarget } from '../src/audio/capture'
 
@@ -7,6 +7,23 @@ let failures = 0
 const check = (name: string, ok: boolean, detail: string) => {
   if (!ok) failures++
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(42)} ${detail}`)
+}
+
+console.log('\n--- POINTER KEYBOARD: leaving a key ends its exact note ---')
+{
+  const held = new HeldPointerNotes()
+  check('pointer down starts one note', held.press(7, 60), 'pointer 7 started C4')
+  check(
+    'pointer leave releases the note-on pitch',
+    held.release(7) === 60,
+    'released C4 without recomputing from the current octave',
+  )
+  check('drag-enter can start the next key', held.press(7, 62), 'same pointer started D4')
+  check('pointer up releases the dragged-to key', held.release(7) === 62, 'released D4')
+  check('duplicate pointer end is harmless', held.release(7) === null, 'no duplicate note-off')
+  held.press(8, 64)
+  held.press(9, 67)
+  check('blur releases every pointer note', held.releaseAll().join(',') === '64,67', 'released E4, G4')
 }
 
 console.log('\n--- KEYBOARD: note-off releases the note that started ---')

@@ -93,6 +93,30 @@ export class HeldKeyboardNotes {
   }
 }
 
+/** Notes begun by pointer id, so release never depends on a later render's root note. */
+export class HeldPointerNotes {
+  private readonly notes = new Map<number, number>()
+
+  press(pointerId: number, midi: number): boolean {
+    if (this.notes.has(pointerId)) return false
+    this.notes.set(pointerId, midi)
+    return true
+  }
+
+  release(pointerId: number): number | null {
+    const midi = this.notes.get(pointerId)
+    if (midi === undefined) return null
+    this.notes.delete(pointerId)
+    return midi
+  }
+
+  releaseAll(): number[] {
+    const notes = [...this.notes.values()]
+    this.notes.clear()
+    return notes
+  }
+}
+
 export function Keyboard({
   root,
   sounding,
@@ -117,6 +141,12 @@ export function Keyboard({
   onRef.current = onNoteOn
   offRef.current = onNoteOff
   shiftRef.current = onOctaveShift
+  const pointerNotes = useRef(new HeldPointerNotes())
+
+  const releasePointer = (pointerId: number) => {
+    const midi = pointerNotes.current.release(pointerId)
+    if (midi !== null) offRef.current(midi)
+  }
 
   useEffect(() => {
     // Tracks which computer keys are down, because keydown repeats while held
@@ -154,15 +184,24 @@ export function Keyboard({
     // would hang until it happened to be pressed again.
     const blur = () => {
       for (const midi of down.releaseAll()) offRef.current(midi)
+      for (const midi of pointerNotes.current.releaseAll()) offRef.current(midi)
     }
+
+    // A pointer released outside a key—or outside the side panel entirely—may
+    // skip that button's React handler. The window-level end is the backstop.
+    const pointerEnd = (e: PointerEvent) => releasePointer(e.pointerId)
 
     window.addEventListener('keydown', keyDown)
     window.addEventListener('keyup', keyUp)
+    window.addEventListener('pointerup', pointerEnd)
+    window.addEventListener('pointercancel', pointerEnd)
     window.addEventListener('blur', blur)
     return () => {
       blur()
       window.removeEventListener('keydown', keyDown)
       window.removeEventListener('keyup', keyUp)
+      window.removeEventListener('pointerup', pointerEnd)
+      window.removeEventListener('pointercancel', pointerEnd)
       window.removeEventListener('blur', blur)
     }
   }, [])
@@ -174,10 +213,23 @@ export function Keyboard({
   const blackWidth = (100 / whites.length) * 0.62
 
   const press = (e: React.PointerEvent, midi: number) => {
-    // Capture, so a drag off the key still delivers its pointerup here and the
-    // note cannot hang.
-    e.currentTarget.setPointerCapture(e.pointerId)
-    onNoteOn(midi)
+    if (e.button !== 0) return
+    // Do not capture the pointer. A piano key is held only while the pointer is
+    // physically over it; capture made dragging away look like a stuck note.
+    // Touch browsers may apply implicit capture before pointerdown is delivered.
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    if (pointerNotes.current.press(e.pointerId, midi)) onRef.current(midi)
+    e.preventDefault()
+  }
+
+  const enter = (e: React.PointerEvent, midi: number) => {
+    // Dragging across the keyboard becomes a glissando: leave releases the old
+    // key and enter starts the new one while the primary button remains held.
+    if ((e.buttons & 1) !== 0 && pointerNotes.current.press(e.pointerId, midi)) {
+      onRef.current(midi)
+    }
   }
 
   return (
@@ -192,8 +244,10 @@ export function Keyboard({
               className={sounding.has(midi) ? 'key key-white is-on' : 'key key-white'}
               aria-label={midiToName(midi)}
               onPointerDown={(e) => press(e, midi)}
-              onPointerUp={() => onNoteOff(midi)}
-              onPointerCancel={() => onNoteOff(midi)}
+              onPointerEnter={(e) => enter(e, midi)}
+              onPointerLeave={(e) => releasePointer(e.pointerId)}
+              onPointerUp={(e) => releasePointer(e.pointerId)}
+              onPointerCancel={(e) => releasePointer(e.pointerId)}
             >
               <span className="key-code">{k.code}</span>
             </button>
@@ -211,8 +265,10 @@ export function Keyboard({
               style={{ left: `${k.offset}%`, width: `${blackWidth}%` }}
               aria-label={midiToName(midi)}
               onPointerDown={(e) => press(e, midi)}
-              onPointerUp={() => onNoteOff(midi)}
-              onPointerCancel={() => onNoteOff(midi)}
+              onPointerEnter={(e) => enter(e, midi)}
+              onPointerLeave={(e) => releasePointer(e.pointerId)}
+              onPointerUp={(e) => releasePointer(e.pointerId)}
+              onPointerCancel={(e) => releasePointer(e.pointerId)}
             >
               <span className="key-code">{k.code}</span>
             </button>
