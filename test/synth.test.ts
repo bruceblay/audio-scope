@@ -205,5 +205,83 @@ console.log('\n--- DEFAULTS: sane and quiet on arrival ---')
   )
 }
 
+// --- Recovery -------------------------------------------------------------
+console.log('\n--- RECOVERY: rebuilding the graph preserves performance state ---')
+{
+  class Param {
+    value = 0
+    setTargetAtTime(value: number) { this.value = value }
+    setValueAtTime(value: number) { this.value = value }
+    linearRampToValueAtTime(value: number) { this.value = value }
+    cancelScheduledValues() {}
+  }
+  class Node {
+    gain = new Param()
+    frequency = new Param()
+    detune = new Param()
+    Q = new Param()
+    delayTime = new Param()
+    threshold = new Param()
+    knee = new Param()
+    ratio = new Param()
+    attack = new Param()
+    release = new Param()
+    type = ''
+    connect() { return this }
+    disconnect() {}
+    start() {}
+    stop() {}
+  }
+  class Context {
+    currentTime = 0
+    sampleRate = 48000
+    createGain() { return new Node() }
+    createOscillator() { return new Node() }
+    createBiquadFilter() { return new Node() }
+    createDelay() { return new Node() }
+    createDynamicsCompressor() { return new Node() }
+  }
+
+  Object.defineProperty(globalThis, 'window', { value: globalThis, configurable: true })
+  const ctx = new Context() as unknown as AudioContext
+  const destination = new Node() as unknown as AudioNode
+
+  const arp = new Synth()
+  arp.connect(ctx, destination)
+  const arpSettings = { ...DEFAULT_SYNTH, enabled: true, arpOn: true, arpLatch: true }
+  arp.update(arpSettings)
+  arp.noteOn(60)
+  arp.noteOff(60)
+  const arpState = arp as unknown as { arpTimer: number | null }
+  const before = arpState.arpTimer
+  arp.update({ ...arpSettings, cutoff: 3300 })
+  check(
+    'an unrelated parameter edit leaves the arp clock alone',
+    before !== null && arpState.arpTimer === before,
+    'filter cutoff did not restart or clear the interval',
+  )
+  arp.recover()
+  check(
+    'recovery restarts a latched arpeggiator',
+    before !== null && arpState.arpTimer !== null && arp.sounding.has(60),
+    'Run still has a clock and its latched C4',
+  )
+  arp.dispose()
+
+  const sustained = new Synth()
+  sustained.connect(ctx, destination)
+  sustained.update({ ...DEFAULT_SYNTH, enabled: true })
+  sustained.noteOn(64)
+  const voiceState = sustained as unknown as { voices: Map<number, unknown> }
+  sustained.recover()
+  check(
+    'recovery recreates an ordinary held voice',
+    voiceState.voices.has(64),
+    'held E4 was rebuilt after the suspect filter was discarded',
+  )
+  sustained.noteOff(64)
+  sustained.dispose()
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`)
 process.exit(failures === 0 ? 0 : 1)

@@ -48,6 +48,25 @@ export async function getTab(tabId: number): Promise<TabTarget | null> {
   }
 }
 
+/**
+ * Resolve the target for a connection attempt.
+ *
+ * Manual attempts always query the active tab at click time; panel state is an
+ * asynchronously refreshed label and may still name the previous capture.
+ * Automatic recovery supplies the exact tab id whose invocation or lifecycle
+ * event initiated the attempt.
+ *
+ * Lookups are parameters so this race-sensitive policy is testable without a
+ * live Chrome API.
+ */
+export function resolveCaptureTarget(
+  explicitTabId?: number,
+  active: () => Promise<TabTarget | null> = getActiveTab,
+  byId: (tabId: number) => Promise<TabTarget | null> = getTab,
+): Promise<TabTarget | null> {
+  return explicitTabId === undefined ? active() : byId(explicitTabId)
+}
+
 function toTarget(tab: chrome.tabs.Tab): TabTarget {
   let host = ''
   try {

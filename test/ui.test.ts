@@ -1,6 +1,7 @@
 /** Small state-machine regressions that do not need a browser DOM. */
 import { HeldKeyboardNotes } from '../src/ui/Keyboard'
 import { applyPreset, type Preset } from '../src/sidepanel/presets'
+import { resolveCaptureTarget, type TabTarget } from '../src/audio/capture'
 
 let failures = 0
 const check = (name: string, ok: boolean, detail: string) => {
@@ -23,6 +24,36 @@ console.log('\n--- KEYBOARD: note-off releases the note that started ---')
   held.press('q', 60)
   held.press('w', 62)
   check('blur releases every exact note', held.releaseAll().join(',') === '60,62', 'released 60, 62')
+}
+
+console.log('\n--- CAPTURE: manual connect uses the live active tab ---')
+{
+  const previous: TabTarget = { id: 1, title: 'Old', host: 'old.test', audible: true }
+  const active: TabTarget = { id: 2, title: 'New', host: 'new.test', audible: true }
+  let activeReads = 0
+  let idReads = 0
+  const readActive = async () => {
+    activeReads++
+    return active
+  }
+  const readById = async (id: number) => {
+    idReads++
+    return id === previous.id ? previous : null
+  }
+
+  const manual = await resolveCaptureTarget(undefined, readActive, readById)
+  check(
+    'manual Connect resolves the active tab',
+    manual?.id === active.id && activeReads === 1 && idReads === 0,
+    `selected tab ${manual?.id}, ignored cached tab ${previous.id}`,
+  )
+
+  const automatic = await resolveCaptureTarget(previous.id, readActive, readById)
+  check(
+    'automatic recovery honors its explicit tab',
+    automatic?.id === previous.id && activeReads === 1 && idReads === 1,
+    `selected explicit tab ${automatic?.id}`,
+  )
 }
 
 console.log('\n--- PRESETS: legacy invisible state is discarded ---')

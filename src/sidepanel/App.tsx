@@ -5,6 +5,7 @@ import {
   getActiveTab,
   getTab,
   isInvocationError,
+  resolveCaptureTarget,
   type TabTarget,
 } from '../audio/capture'
 import { AudioEngine } from '../audio/engine'
@@ -217,10 +218,13 @@ export function App() {
     setError(null)
     setConnecting(true)
     try {
-      const tab =
-        explicitTabId !== undefined
-          ? await getTab(explicitTabId)
-          : (target ?? (await getActiveTab()))
+      // A manual Connect means "the tab I am looking at now". `target` is UI
+      // state updated asynchronously by the tab-follow effect and can still be
+      // the previously captured tab immediately after Disconnect. Using it
+      // here silently reconnects the old tab and makes the button look dead.
+      // Automatic recovery passes an explicit id and remains intentionally
+      // pinned to the tab whose grant or stream event triggered it.
+      const tab = await resolveCaptureTarget(explicitTabId)
       if (!tab || tab.id < 0) throw new CaptureError('no active tab', 'No tab to listen to.')
       setTarget(tab)
 
@@ -261,7 +265,7 @@ export function App() {
       connectingRef.current = false
       setConnecting(false)
     }
-  }, [disconnect, engine, target])
+  }, [disconnect, engine])
 
   // --- Identify the tab this panel is watching ----------------------------
   // While disconnected, follow the active tab so Connect targets whatever you
@@ -333,13 +337,11 @@ export function App() {
   // in session storage. Consuming it here turns that single click into a full
   // reconnect with no second step.
   //
-  // Held in a ref rather than listed as a dependency. `connect` closes over
-  // `target`, and `target` changes whenever the panel follows the active tab -
-  // which includes the instant the side panel opens and takes focus. Depending on
-  // it tore this effect down and rebuilt it exactly when the note arrived: the
-  // in-flight read would remove the note, then bail on the cancel flag, and the
-  // auto-connect silently never happened. The user then pressed Connect against
-  // whatever tab was now in front, which usually had no grant.
+  // Held in a ref so message callbacks always invoke the latest connection
+  // routine without making this listener follow callback identity changes.
+  // Rebuilding the effect while an invocation note is in flight can remove the
+  // note and then discard it via the cancelled flag, silently wasting the one
+  // toolbar click that can restore the activeTab grant.
   const connectRef = useRef(connect)
   connectRef.current = connect
 

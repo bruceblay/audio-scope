@@ -58,6 +58,11 @@ made the opposite choice.
                     source -> analyserMono       (FFT / pitch)
 ```
 
+Manual Connect resolves the active tab again at click time. The panel's displayed
+target is asynchronous UI state and can still refer to the previous capture just
+after a tab switch and Disconnect. Automatic reconnects instead pass an explicit
+tab id so lifecycle events remain pinned to the tab that initiated them.
+
 ### The invocation requirement, and recovery
 
 `chrome.tabCapture.getMediaStreamId()` refuses unless the extension has been

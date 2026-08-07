@@ -403,6 +403,13 @@ against a 125 ms step, so the timer was cleared before it could ever fire and th
 arpeggiator went silent for as long as the knob was moving. It now restarts only
 when the rate itself changes.
 
+Graph recovery has the same continuity requirement. If a resonant filter edit
+poisons downstream feedback with a non-finite sample, recovery kills the suspect
+voices and rebuilds the effects and limiter. It must then recreate held voices or
+restart the arpeggiator from the still-held/latched note set; otherwise Run remains
+visibly on with no interval behind it, which looks like the parameter edit stopped
+the instrument at random.
+
 ### Tektronix light mode
 
 A design pass giving the chrome a second, light theme modeled on a Tektronix 2236.

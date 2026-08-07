@@ -407,8 +407,10 @@ export class Synth {
    * delay line, the reverb's combs and allpasses, the limiter's envelope. A
    * transient glitch became a permanently dead synth. Everything stateful
    * downstream of the voices is disposable by design, so recovery is: kill
-   * the voices (their filters are suspect), tear out the chain, rebuild it.
-   * Under a second, and no stored settings are touched.
+   * the voices (their filters are suspect), tear out the chain, rebuild it,
+   * then recreate whatever the player is still holding. The last step matters:
+   * without it the Arp switch stays visibly on while its clock is gone, making
+   * a filter edit look as though it randomly stopped the sequencer.
    */
   recover() {
     if (!this.ctx || !this.out) return
@@ -427,6 +429,21 @@ export class Synth {
       // Already disconnected.
     }
     this.buildChain()
+    this.resumeSounding()
+  }
+
+  /** Recreate held or latched notes after the disposable graph is rebuilt. */
+  private resumeSounding() {
+    const ctx = this.ctx
+    const out = this.out
+    if (!ctx || !out || !this.settings.enabled) return
+    if (this.settings.arpOn) {
+      if (this.sounding.size > 0) this.startArp()
+      return
+    }
+    for (const midi of this.held) {
+      this.voices.set(midi, new Voice(ctx, out, midi, this.settings))
+    }
   }
 
   private applyFx(s: SynthSettings) {
