@@ -276,8 +276,9 @@ Worth stating, since it is the whole premise of the project:
   why VU reads loudness and PPM reads peaks, and why they disagree. Drawing a
   needle on an instantaneous peak value is the fake version.
 - **An RTA on raw FFT bins is not an RTA.** FFT bins are linear in frequency;
-  octave-fraction bands are logarithmic and standardized. Binning FFT output into
-  approximate bands is fine and cheap, but it should be labelled as what it is.
+  octave-fraction bands are logarithmic and standardized. The shipped bars use
+  bands anchored at 1 kHz and sum linear power across every FFT bin in each band;
+  taking the loudest bin would be a peak-binned spectrum, not band energy.
 - **Rainbow colormaps invent structure.** A spectrogram's colour scale should be
   perceptually uniform (viridis, magma, or a single-hue ramp). Rainbow scales have
   bright bands at yellow and cyan that read as features in the data which are not

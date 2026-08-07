@@ -209,7 +209,10 @@ export function App() {
 
   const connectingRef = useRef(false)
   const connect = useCallback(async (explicitTabId?: number) => {
-    if (connecting) return
+    // State updates are asynchronous: two triggers in the same render window
+    // can both see `connecting === false`. The ref closes that window
+    // synchronously and is also what the invocation recovery path waits on.
+    if (connectingRef.current) return
     connectingRef.current = true
     setError(null)
     setConnecting(true)
@@ -258,7 +261,7 @@ export function App() {
       connectingRef.current = false
       setConnecting(false)
     }
-  }, [connecting, disconnect, engine, target])
+  }, [disconnect, engine, target])
 
   // --- Identify the tab this panel is watching ----------------------------
   // While disconnected, follow the active tab so Connect targets whatever you
@@ -679,7 +682,10 @@ export function App() {
 
   const isCymatics = mode === 'cymatics'
   const isAnalyzer = mode === 'analyzer'
-  const dim = !connected
+  // The synth is a first-class source and drives the same analysis bus without
+  // tab capture. Its measurements should not look disabled merely because the
+  // source indicator correctly says no tab is connected.
+  const dim = !connected && !synthSettings.enabled
   const needsInvocation = !!error && error.recoverable
 
   if (showAbout) return <AboutView onClose={() => setShowAbout(false)} />

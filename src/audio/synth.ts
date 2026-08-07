@@ -22,8 +22,6 @@ export type ArpMode = 'up' | 'down' | 'updown' | 'random'
 export interface SynthSettings {
   enabled: boolean
   waveform: Waveform
-  /** Octave transpose applied to every note. */
-  octave: number
   /** Spread between the two oscillators, in cents. */
   detune: number
   /** Filter cutoff in Hz. */
@@ -61,7 +59,6 @@ export const DEFAULT_SYNTH: SynthSettings = {
   // Sine, because the synth is test equipment first: a sine is the signal with
   // the known answer - one spectral line, a perfect X-Y circle at 1:1.
   waveform: 'sine',
-  octave: 0,
   // Zero detune: two oscillators in phase sum to one waveform, which is the
   // honest signal to measure with. Detune is one knob away when wanted.
   detune: 0,
@@ -116,13 +113,13 @@ class Voice {
     s: SynthSettings,
   ) {
     const now = ctx.currentTime
-    const hz = midiToHz(midi + s.octave * 12)
+    const hz = midiToHz(midi)
     this.startAt = now
     this.s = s
 
     this.filter = ctx.createBiquadFilter()
     this.filter.type = 'lowpass'
-    // Q capped at 14 in the audio layer no matter what settings carry: still a
+    // Q capped at 10 in the audio layer no matter what settings carry: still a
     // screaming resonance, but inside the region where swept biquads stay
     // numerically stable.
     this.filter.Q.value = clamp(s.resonance, 0.5, 10)
@@ -198,19 +195,24 @@ class Voice {
       this.oscA.detune.setTargetAtTime(-next.detune / 2, now, 0.01)
       this.oscB.detune.setTargetAtTime(next.detune / 2, now, 0.01)
     }
-    if (next.octave !== prev.octave) {
-      const hz = midiToHz(this.midi + next.octave * 12)
-      this.oscA.frequency.setTargetAtTime(hz, now, 0.01)
-      this.oscB.frequency.setTargetAtTime(hz, now, 0.01)
-    }
     // Q moves slowly on purpose: frequency and Q automating fast together is
     // the classic biquad instability recipe.
     if (next.resonance !== prev.resonance)
       this.filter.Q.setTargetAtTime(clamp(next.resonance, 0.5, 10), now, 0.08)
 
-    if (next.cutoff !== prev.cutoff || next.envAmount !== prev.envAmount || next.decay !== prev.decay)
+    if (
+      next.cutoff !== prev.cutoff ||
+      next.envAmount !== prev.envAmount ||
+      next.attack !== prev.attack ||
+      next.decay !== prev.decay
+    )
       this.requestFilterReschedule()
-    if (next.level !== prev.level || next.sustain !== prev.sustain || next.decay !== prev.decay)
+    if (
+      next.level !== prev.level ||
+      next.attack !== prev.attack ||
+      next.sustain !== prev.sustain ||
+      next.decay !== prev.decay
+    )
       this.scheduleAmp(now)
   }
 
@@ -576,12 +578,15 @@ export class Synth {
       this.settings.arpMode === 'random'
         ? Math.floor(Math.random() * notes.length)
         : this.arpStep % notes.length
-    this.arpVoice = new Voice(this.ctx, this.out, notes[index], this.settings)
+    const voice = new Voice(this.ctx, this.out, notes[index], this.settings)
+    this.arpVoice = voice
 
     // Gate each step to a fraction of its slot, so the pattern articulates
     // rather than running together.
     const step = 1 / this.settings.arpRate
-    window.setTimeout(() => this.arpVoice?.release(this.settings.release), step * 700)
+    // Capture this step's voice. A throttled timer must never release whichever
+    // newer voice happens to occupy `arpVoice` when the callback finally runs.
+    window.setTimeout(() => voice.release(this.settings.release), step * 700)
     this.arpStep++
   }
 }

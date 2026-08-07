@@ -94,7 +94,12 @@ export function Stage({
 
       if (now - lastPush > 100) {
         lastPush = now
-        readoutRef.current(renderer.readout())
+        // Renderers reuse one mutable readout object to keep the frame path
+        // allocation-free. React state, however, uses object identity to decide
+        // whether an update changed. Passing the reused object directly makes
+        // the readout rail render once and then freeze. The rail updates at only
+        // 10 Hz, so this small snapshot belongs here, outside the hot path.
+        readoutRef.current({ ...renderer.readout() } as AnyReadout)
       }
     }
     raf = requestAnimationFrame(loop)

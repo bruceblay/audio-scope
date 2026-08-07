@@ -14,7 +14,7 @@
     "dev": "vite build --watch --mode development",
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:dsp && npm run test:cymatics && npm run test:sand && npm run test:analyzer && npm run test:meters && npm run test:synth",
+    "test": "npm run test:dsp && npm run test:cymatics && npm run test:sand && npm run test:analyzer && npm run test:meters && npm run test:synth && npm run test:ui",
     "test:dsp": "esbuild test/dsp.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/dsp.test.mjs && node node_modules/.cache/dsp.test.mjs",
     "test:cymatics": "esbuild test/cymatics.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/cymatics.test.mjs && node node_modules/.cache/cymatics.test.mjs",
     "test:sand": "esbuild test/sand.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/sand.test.mjs && node node_modules/.cache/sand.test.mjs",
@@ -22,6 +22,7 @@
     "test:meters": "esbuild test/meters.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/meters.test.mjs && node node_modules/.cache/meters.test.mjs",
     "icons": "node scripts/make-icons.mjs",
     "test:synth": "esbuild test/synth.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/synth.test.mjs && node node_modules/.cache/synth.test.mjs",
+    "test:ui": "esbuild test/ui.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/ui.test.mjs && node node_modules/.cache/ui.test.mjs",
     "package": "npm run build && rm -f audio-scope-v${npm_package_version}.zip && (cd dist && zip -rq ../audio-scope-v${npm_package_version}.zip . -x '*.DS_Store')"
   },
   "dependencies": {

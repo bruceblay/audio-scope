@@ -9,6 +9,7 @@
  * Run: npm test
  */
 import { PitchDetector } from '../src/audio/pitch'
+import { follow } from '../src/lib/dsp'
 import { Trigger } from '../src/modes/scope/trigger'
 import type { Pitch } from '../src/audio/types'
 
@@ -356,6 +357,36 @@ console.log('\n--- TRIGGER: DC-offset signal (auto level must follow) ---')
   let residue = 0
   for (let i = 0; i < e2.length; i++) residue += e2[i]
   check('decay reaches actual zero', residue === 0, 'no immortal ghost energy')
+}
+
+// --- Frame-rate-independent followers -------------------------------------
+console.log('\n--- FOLLOWERS: the same time constants at any frame rate ---')
+{
+  const run = (fps: number, target: number, seconds: number) => {
+    let value = 0
+    for (let i = 0; i < fps * seconds; i++) value = follow(value, target, 0.55, 0.1, 1 / fps)
+    return value
+  }
+  const readings = [30, 60, 120].map((fps) => run(fps, 1, 1))
+  const spread = Math.max(...readings) - Math.min(...readings)
+  check(
+    'attack is frame-rate independent',
+    spread < 1e-9,
+    `30/60/120 Hz spread ${spread.toExponential(1)}`,
+  )
+
+  const release = (fps: number) => {
+    let value = 1
+    for (let i = 0; i < fps; i++) value = follow(value, 0, 0.55, 0.1, 1 / fps)
+    return value
+  }
+  const tails = [30, 60, 120].map(release)
+  const tailSpread = Math.max(...tails) - Math.min(...tails)
+  check(
+    'release is frame-rate independent',
+    tailSpread < 1e-9,
+    `30/60/120 Hz spread ${tailSpread.toExponential(1)}`,
+  )
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`)

@@ -54,9 +54,15 @@ export function applyPreset(p: Preset): {
     v.displayStyle === 'tui' || v.displayStyle === 'text'
       ? ({ ...v, displayStyle: 'dots' } as T)
       : v
+  // `xyExposure` was persisted before X-Y switched to streaming exactly the
+  // samples elapsed since the previous frame. Strip it from old user presets
+  // so it cannot survive as invisible dirty state.
+  const { xyExposure: _legacyXYExposure, ...scope } = p.scope as Partial<ScopeSettings> & {
+    xyExposure?: number
+  }
   return {
     mode: p.mode,
-    scope: { ...DEFAULT_SCOPE_SETTINGS, ...style(p.scope) },
+    scope: { ...DEFAULT_SCOPE_SETTINGS, ...style(scope) },
     analyzer: { ...DEFAULT_ANALYZER_SETTINGS, ...style(p.analyzer) },
   }
 }
@@ -86,7 +92,6 @@ export const FACTORY_PRESETS: Preset[] = [
       triggerAuto: true,
       triggerLevel: 0,
       hysteresis: 0.04,
-      xyExposure: 1024,
       xySmoothing: 0.15,
       beamFocus: 0.85,
       displayStyle: 'crt',
@@ -115,7 +120,6 @@ export const FACTORY_PRESETS: Preset[] = [
       triggerAuto: true,
       triggerLevel: 0,
       hysteresis: 0.04,
-      xyExposure: 2048,
       xySmoothing: 0.05,
       beamFocus: 0.85,
       displayStyle: 'crt',
@@ -159,7 +163,6 @@ export const FACTORY_PRESETS: Preset[] = [
     scope: {
       channel: 'xy',
       voltsPerDiv: 0.1,
-      xyExposure: 4096,
       xySmoothing: 0.3,
       persistence: 0.6,
       halation: 0.9,
@@ -185,7 +188,6 @@ export const FACTORY_PRESETS: Preset[] = [
       triggerAuto: true,
       triggerLevel: 0,
       hysteresis: 0.04,
-      xyExposure: 1024,
       xySmoothing: 0.15,
       beamFocus: 0.25,
       phosphor: 'p7',

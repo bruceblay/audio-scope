@@ -160,7 +160,7 @@ export function SynthPanel({
               label="Res"
               value={settings.resonance}
               min={0.5}
-              max={20}
+              max={10}
               step={0.5}
               reset={6}
               format={(v) => v.toFixed(1)}

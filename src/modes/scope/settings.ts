@@ -25,16 +25,6 @@ export const TIME_PER_DIV = [
  */
 export const VOLTS_PER_DIV = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] as const
 
-/**
- * Samples plotted per frame in X-Y, i.e. the exposure.
- *
- * The whole 4096-sample record is 85 ms at 48 kHz, and drawing all of it means
- * looking at an 85 ms exposure of a figure that is moving - which reads as both
- * lag and scribble. A shorter exposure is what a real scope does: the beam is at
- * one place now, and persistence draws the tail.
- */
-export const XY_EXPOSURE = [128, 256, 512, 1024, 2048, 4096] as const
-
 /** Widest smoothing half-window, in samples. */
 export const MAX_SMOOTH_HALF = 32
 
@@ -66,8 +56,6 @@ export interface ScopeSettings {
    */
   hysteresis: number
 
-  /** X-Y only: samples drawn per frame. Lower is tighter and more current. */
-  xyExposure: number
   /**
    * X-Y only, 0..1. Band-limits the deflection signals before plotting.
    *
@@ -125,7 +113,6 @@ export const DEFAULT_SCOPE_SETTINGS: ScopeSettings = {
   triggerLevel: 0,
   hysteresis: 0.04,
 
-  xyExposure: 1024,
   xySmoothing: 0.15,
   beamFocus: 0.55,
 

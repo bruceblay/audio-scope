@@ -5,13 +5,21 @@ export const clamp = (v: number, lo: number, hi: number) =>
 
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-/**
- * One-pole follower with independent attack and release rates. Coefficients are
- * per-frame rather than per-second, which is fine for UI-rate smoothing where
- * the frame interval is near-constant.
- */
-export const follow = (current: number, target: number, attack: number, release: number) =>
-  current + (target - current) * (target > current ? attack : release)
+/** Convert a coefficient tuned at 60 Hz into the equivalent coefficient for dt. */
+export const frameCoeff = (at60Hz: number, dt: number) =>
+  1 - Math.pow(1 - clamp(at60Hz, 0, 1), Math.max(0, dt) * 60)
+
+/** One-pole follower with frame-rate-independent attack and release. */
+export const follow = (
+  current: number,
+  target: number,
+  attack: number,
+  release: number,
+  dt = 1 / 60,
+) => {
+  const coefficient = frameCoeff(target > current ? attack : release, dt)
+  return current + (target - current) * coefficient
+}
 
 /** Frame-rate independent exponential decay toward zero over `tau` seconds. */
 export const decayCoeff = (dt: number, tau: number) =>

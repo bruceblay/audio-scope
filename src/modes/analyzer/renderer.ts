@@ -11,13 +11,14 @@
  */
 
 import type { AudioFrame } from '../../audio/types'
-import { clamp } from '../../lib/dsp'
+import { clamp, frameCoeff } from '../../lib/dsp'
 import { font, phosphor, screenTheme, type ThemeId } from '../../ui/tokens'
 import { TUI_TICK, cellMetrics } from '../../lib/tui'
 import type { Renderer } from '../types'
 import type { AnalyzerReadout, AnalyzerSettings, ColorMap } from './settings'
 import {
   buildAxis,
+  bandPowerDb,
   hzAt,
   magnitudeAt,
   octaveBands,
@@ -84,6 +85,9 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
   /** Octave bands for bar mode, recomputed only when the range changes. */
   private bands: { lo: number; hi: number; centre: number }[] = []
   private bandKey = ''
+  /** Power-integrated levels and holds, one value per fractional-octave band. */
+  private bandMags = new Float32Array(0)
+  private bandPeaks = new Float32Array(0)
   /** Top of the visible range after the Nyquist cap. Held, not re-parsed. */
   private topHz = 20000
 
@@ -227,10 +231,12 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
   }
 
   private ensureBands(s: AnalyzerSettings) {
-    const key = `${s.minHz}:${this.topHz}:${s.bandsPerOctave}`
+    const key = `${this.axisKey}:${s.bandsPerOctave}`
     if (key === this.bandKey) return
     this.bandKey = key
     this.bands = octaveBands(s.minHz, this.topHz, s.bandsPerOctave)
+    this.bandMags = new Float32Array(this.bands.length).fill(-140)
+    this.bandPeaks = new Float32Array(this.bands.length).fill(-140)
   }
 
   /** Horizontal position of a frequency on the log axis, 0..1. */
@@ -242,10 +248,12 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
 
   private measure(frame: AudioFrame, s: AnalyzerSettings) {
     const spec = frame.spectrumShort
+    const barsVisible = s.view === 'spectrum' && s.bars
 
     // Fast attack, slow release. An analyzer must jump onto a transient and ease
     // off it, or peaks read late and the display lies about dynamics.
-    const release = 1 - clamp(s.averaging, 0, 0.98) * 0.85
+    const releaseAt60Hz = 1 - clamp(s.averaging, 0, 0.98) * 0.85
+    const release = frameCoeff(releaseAt60Hz, frame.dt)
     const decayPerFrame = s.peakDecay * frame.dt
 
     for (let x = 0; x < this.w; x++) {
@@ -260,21 +268,47 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     // marker and the hold line sit on the shape actually being drawn rather than
     // on a rougher one underneath it. Bars skip it: banding is the same
     // operation, and doing both would smooth twice.
-    if (!s.bars) {
+    if (s.view === 'spectrum' && !s.bars) {
       smoothOctaves(this.mags, this.smoothTmp, this.w, s.smoothOctave, s.minHz, this.topHz)
     }
 
     let peakDb = -140
-    let peakX = 0
-    for (let x = 0; x < this.w; x++) {
-      this.peaks[x] = Math.max(this.mags[x], this.peaks[x] - decayPerFrame)
-      if (this.mags[x] > peakDb) {
-        peakDb = this.mags[x]
-        peakX = x
+    let peakHz = s.minHz
+    // Keep hidden bar state advancing while the waterfall is selected, so a
+    // peak hold cannot freeze for minutes and reappear stale on return.
+    if (s.bars) {
+      this.ensureBands(s)
+      for (let i = 0; i < this.bands.length; i++) {
+        const band = this.bands[i]
+        const raw =
+          bandPowerDb(
+            spec,
+            frame.sampleRate,
+            Math.max(band.lo, s.minHz),
+            Math.min(band.hi, this.topHz),
+          ) + tiltDb(band.centre, s.slope)
+        this.bandMags[i] =
+          raw > this.bandMags[i]
+            ? raw
+            : this.bandMags[i] + (raw - this.bandMags[i]) * release
+        this.bandPeaks[i] = Math.max(this.bandMags[i], this.bandPeaks[i] - decayPerFrame)
+        if (barsVisible && this.bandMags[i] > peakDb) {
+          peakDb = this.bandMags[i]
+          peakHz = band.centre
+        }
+      }
+    }
+    if (!barsVisible) {
+      for (let x = 0; x < this.w; x++) {
+        this.peaks[x] = Math.max(this.mags[x], this.peaks[x] - decayPerFrame)
+        if (this.mags[x] > peakDb) {
+          peakDb = this.mags[x]
+          peakHz = hzAt(x, this.w, s.minHz, this.topHz)
+        }
       }
     }
 
-    this.out.peakHz = hzAt(peakX, this.w, s.minHz, this.topHz)
+    this.out.peakHz = peakHz
     this.out.peakDb = peakDb
     this.out.centroidHz = spectralCentroid(frame.spectrum, frame.sampleRate)
     this.out.rmsDb = frame.rms > 1e-7 ? 20 * Math.log10(frame.rms) : -120
@@ -385,21 +419,14 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`)
     grad.addColorStop(1, `rgba(${r},${g},${b},0.7)`)
 
-    for (const band of this.bands) {
+    for (let i = 0; i < this.bands.length; i++) {
+      const band = this.bands[i]
       const x0 = this.tFor(Math.max(band.lo, s.minHz), s) * this.w
       const x1 = this.tFor(Math.min(band.hi, this.topHz), s) * this.w
       const width = Math.max(1, x1 - x0 - gap)
 
-      // The band's level is the loudest column inside it, matching how the curve
-      // treats a pixel covering many bins.
-      let best = -140
-      let peak = -140
-      const from = clamp(Math.round(x0), 0, this.w - 1)
-      const to = clamp(Math.round(x1), 0, this.w - 1)
-      for (let x = from; x <= to; x++) {
-        if (this.mags[x] > best) best = this.mags[x]
-        if (this.peaks[x] > peak) peak = this.peaks[x]
-      }
+      const best = this.bandMags[i]
+      const peak = this.bandPeaks[i]
 
       const y = this.yFor(best, s)
       c.fillStyle = grad
@@ -576,7 +603,8 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
     const gapY = Math.max(1, Math.round(this.dpr))
     const gapX = Math.max(1, Math.round(this.dpr))
 
-    for (const band of this.bands) {
+    for (let i = 0; i < this.bands.length; i++) {
+      const band = this.bands[i]
       const x0 = this.tFor(Math.max(band.lo, s.minHz), s) * this.w
       const x1 = this.tFor(Math.min(band.hi, this.topHz), s) * this.w
       // Snap the bar to whole cells so every bar is made of the same bricks.
@@ -585,14 +613,8 @@ export class AnalyzerRenderer implements Renderer<AnalyzerSettings, AnalyzerRead
       const bx = c0 * cellW
       const bw = (c1 - c0) * cellW - gapX
 
-      let best = -140
-      let peak = -140
-      const from = clamp(Math.round(x0), 0, this.w - 1)
-      const to = clamp(Math.round(x1), 0, this.w - 1)
-      for (let x = from; x <= to; x++) {
-        if (this.mags[x] > best) best = this.mags[x]
-        if (this.peaks[x] > peak) peak = this.peaks[x]
-      }
+      const best = this.bandMags[i]
+      const peak = this.bandPeaks[i]
 
       const lit = Math.round(
         clamp((best - s.floorDb) / (s.ceilDb - s.floorDb), 0, 1) * rows,

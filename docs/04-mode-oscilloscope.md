@@ -440,7 +440,7 @@ Grouped as on a real front panel, which also happens to be the clearest layout:
 - **VERTICAL** - volt/div, position, channel (L / R / L+R / X-Y)
 - **HORIZONTAL** - time/div, position
 - **TRIGGER** - mode, slope, level (auto or manual), noise reject
-- **BEAM** (X-Y only) - exposure, smoothing
+- **BEAM** (X-Y only) - smoothing; the streaming beam has no exposure window
 - **DISPLAY** - phosphor, persistence, focus, intensity, graticule brightness
 
 Focus and intensity are separate knobs, as on a real front panel: one sets how

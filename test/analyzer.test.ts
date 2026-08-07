@@ -20,6 +20,7 @@ import {
   SMOOTH_OCTAVES,
 } from '../src/modes/analyzer/settings'
 import {
+  bandPowerDb,
   buildAxis,
   hzAt,
   magnitudeAt,
@@ -297,6 +298,35 @@ console.log('\n--- BARS: real octave-fraction bands ---')
   check('every band is the same log width', spread < 1e-9, `spread ${spread.toExponential(1)} octaves`)
 }
 
+console.log('\n--- BARS: levels are integrated band power ---')
+{
+  const spectrum = new Float32Array(BINS).fill(-Infinity)
+  const at = (hz: number) => Math.round(hz / hzPerBin)
+  spectrum[at(900)] = -30
+  spectrum[at(1100)] = -30
+  const combined = bandPowerDb(spectrum, SR, 800, 1250)
+  check(
+    'two equal components add 3 dB',
+    Math.abs(combined - (-30 + 10 * Math.log10(2))) < 1e-5,
+    `${combined.toFixed(2)} dB from two -30 dB bins`,
+  )
+
+  const one = bandPowerDb(spectrum, SR, 1000, 1250)
+  check('a neighboring band excludes the other tone', Math.abs(one + 30) < 1e-6, `${one.toFixed(2)} dB`)
+
+  const silent = bandPowerDb(new Float32Array(BINS).fill(-Infinity), SR, 800, 1250)
+  check('silent bands stay at the finite floor', silent === -140, `${silent.toFixed(0)} dB`)
+
+  const flat = new Float32Array(BINS).fill(-60)
+  const narrow = bandPowerDb(flat, SR, 900, 1100)
+  const wide = bandPowerDb(flat, SR, 800, 1200)
+  check(
+    'a wider noise band contains more energy',
+    wide > narrow + 2.5,
+    `${narrow.toFixed(2)} dB narrow, ${wide.toFixed(2)} dB wide`,
+  )
+}
+
 // --- Window size -----------------------------------------------------------
 console.log('\n--- WINDOW: the latency/resolution trade is real ---')
 {
@@ -310,10 +340,12 @@ console.log('\n--- WINDOW: the latency/resolution trade is real ---')
     FFT_SIZES.every((n) => Number.isInteger(Math.log2(n))),
     `${FFT_SIZES.join(', ')}`,
   )
+  const lowestThirdOctaveWidth = 20 * (Math.pow(2, 1 / 6) - Math.pow(2, -1 / 6))
+  const defaultBinWidth = SR / DEFAULT_ANALYZER_SETTINGS.fftSize
   check(
-    'the default is well under the old 171 ms',
-    (2048 / SR) * 1000 < 60,
-    `${((2048 / SR) * 1000).toFixed(0)} ms against 171 ms before`,
+    'the default resolves the lowest third-octave band',
+    defaultBinWidth < lowestThirdOctaveWidth,
+    `${defaultBinWidth.toFixed(2)} Hz bins across a ${lowestThirdOctaveWidth.toFixed(2)} Hz band`,
   )
   // AnalyserNode throws above 32768, so an option beyond it would be a runtime
   // error rather than a degraded picture.

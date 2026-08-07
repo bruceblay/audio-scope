@@ -12,7 +12,7 @@
  *      learned that one in production.
  */
 
-import { clamp, follow, linearToDb } from '../lib/dsp'
+import { clamp, follow, frameCoeff, linearToDb } from '../lib/dsp'
 import { Meters } from './meters'
 import { PitchDetector } from './pitch'
 import { BAND_COUNT, FFT_SIZE, TIME_SIZE, type AudioFrame, type Pitch } from './types'
@@ -358,12 +358,12 @@ export class AudioEngine {
 
     // Perceptual level: fast attack, slow release. browser-fx's technique, and
     // the reason its visualizer feels responsive without flickering.
-    this.levelState = follow(this.levelState, clamp(rms * 3, 0, 1), 0.55, 0.1)
+    this.levelState = follow(this.levelState, clamp(rms * 3, 0, 1), 0.55, 0.1, f.dt)
     f.level = this.levelState
 
     // Onset by self-comparison: energy jumping above its own recent average
     // reads as a transient. Cheap, no spectral flux needed.
-    this.slowLevel += (this.levelState - this.slowLevel) * 0.02
+    this.slowLevel += (this.levelState - this.slowLevel) * frameCoeff(0.02, f.dt)
     const onsetRaw = clamp((this.levelState - this.slowLevel * 1.05) * 4, 0, 1)
     this.onsetState = Math.max(onsetRaw, this.onsetState - f.dt * 3)
     f.onset = this.onsetState

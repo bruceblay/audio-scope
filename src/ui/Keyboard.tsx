@@ -62,6 +62,37 @@ export const KEYS = buildKeys()
 
 const BY_CODE = new Map(KEYS.map((k) => [k.code, k]))
 
+/**
+ * Notes started by computer keys, recorded at note-on pitch.
+ *
+ * The keyboard root can change while a key is held. Recomputing the MIDI note
+ * from the new root at key-up releases a different voice and leaves the
+ * original hanging, so the exact note-on value travels with the key until it
+ * is released.
+ */
+export class HeldKeyboardNotes {
+  private readonly notes = new Map<string, number>()
+
+  press(code: string, midi: number): boolean {
+    if (this.notes.has(code)) return false
+    this.notes.set(code, midi)
+    return true
+  }
+
+  release(code: string): number | null {
+    const midi = this.notes.get(code)
+    if (midi === undefined) return null
+    this.notes.delete(code)
+    return midi
+  }
+
+  releaseAll(): number[] {
+    const notes = [...this.notes.values()]
+    this.notes.clear()
+    return notes
+  }
+}
+
 export function Keyboard({
   root,
   sounding,
@@ -90,7 +121,7 @@ export function Keyboard({
   useEffect(() => {
     // Tracks which computer keys are down, because keydown repeats while held
     // and would retrigger the note dozens of times a second.
-    const down = new Set<string>()
+    const down = new HeldKeyboardNotes()
 
     const isTyping = (t: EventTarget | null) =>
       t instanceof HTMLElement &&
@@ -105,28 +136,24 @@ export function Keyboard({
         return
       }
       const key = BY_CODE.get(code)
-      if (!key || down.has(code)) return
-      down.add(code)
-      onRef.current(rootRef.current + key.semitone)
+      if (!key) return
+      const midi = rootRef.current + key.semitone
+      if (!down.press(code, midi)) return
+      onRef.current(midi)
       e.preventDefault()
     }
 
     const keyUp = (e: KeyboardEvent) => {
       const code = e.key.toLowerCase()
-      const key = BY_CODE.get(code)
-      if (!key || !down.has(code)) return
-      down.delete(code)
-      offRef.current(rootRef.current + key.semitone)
+      const midi = down.release(code)
+      if (midi === null) return
+      offRef.current(midi)
     }
 
     // A key held while the panel loses focus never sends keyup, so the note
     // would hang until it happened to be pressed again.
     const blur = () => {
-      for (const code of down) {
-        const key = BY_CODE.get(code)
-        if (key) offRef.current(rootRef.current + key.semitone)
-      }
-      down.clear()
+      for (const midi of down.releaseAll()) offRef.current(midi)
     }
 
     window.addEventListener('keydown', keyDown)

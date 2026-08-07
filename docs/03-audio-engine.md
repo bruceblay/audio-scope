@@ -75,8 +75,13 @@ master sits near 8-10 dB, a live acoustic recording near 18-20 dB.
 the technique from browser-fx's `Visualizer.tsx`:
 
 ```ts
-level += (target - level) * (target > level ? 0.55 : 0.10)
+const k60 = target > level ? 0.55 : 0.10
+const k = 1 - (1 - k60) ** (dt * 60)
+level += (target - level) * k
 ```
+
+The coefficients retain the original response at 60 Hz and are normalized by
+elapsed time, so a throttled or high-refresh panel does not change the meter.
 
 ### Onset detection
 
@@ -84,7 +89,7 @@ browser-fx's approach, kept because it is cheap and it works: compare the
 instantaneous level to a slow-moving average of itself.
 
 ```ts
-slowLevel += (level - slowLevel) * 0.02
+slowLevel += (level - slowLevel) * (1 - (1 - 0.02) ** (dt * 60))
 const onsetRaw = clamp((level - slowLevel * 1.05) * 4, 0, 1)
 onset = Math.max(onsetRaw, onset - dt * 3)     // fast decay envelope
 ```

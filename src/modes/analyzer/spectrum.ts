@@ -125,6 +125,42 @@ export function octaveBands(
   return bands
 }
 
+/**
+ * Total spectral power inside a frequency band, expressed in dB.
+ *
+ * Fractional-octave meters measure the energy passed by each band, not the
+ * loudest FFT bin that happens to fall inside it. Summing in dB would be just
+ * as wrong as averaging dB; convert each bin to power, add, then convert back.
+ * A band narrower than one FFT bin reads its nearest bin, making the loss of
+ * resolution explicit instead of returning a hole.
+ */
+export function bandPowerDb(
+  spectrum: Float32Array,
+  sampleRate: number,
+  loHz: number,
+  hiHz: number,
+  floorDb = -140,
+): number {
+  if (!spectrum.length || !(sampleRate > 0) || !(hiHz > loHz)) return floorDb
+  const hzPerBin = sampleRate / (spectrum.length * 2)
+  let from = Math.max(1, Math.ceil(loHz / hzPerBin))
+  let to = Math.min(spectrum.length - 1, Math.floor(hiHz / hzPerBin))
+  if (to < from) {
+    const nearest = clamp(Math.round(Math.sqrt(loHz * hiHz) / hzPerBin), 1, spectrum.length - 1)
+    from = nearest
+    to = nearest
+  }
+
+  const floorPower = Math.pow(10, floorDb / 10)
+  let power = 0
+  for (let bin = from; bin <= to; bin++) {
+    if (!Number.isFinite(spectrum[bin])) continue
+    const db = Math.max(spectrum[bin], floorDb)
+    power += Math.pow(10, db / 10)
+  }
+  return 10 * Math.log10(Math.max(power, floorPower))
+}
+
 /** Frequency at the centre of pixel `i` of `n`, on the same log axis. */
 export function hzAt(i: number, n: number, minHz: number, maxHz: number): number {
   return minHz * Math.exp(((i + 0.5) / n) * Math.log(maxHz / minHz))
