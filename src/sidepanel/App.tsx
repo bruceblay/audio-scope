@@ -38,6 +38,9 @@ import { Keyboard } from '../ui/Keyboard'
 import { AboutView } from './AboutView'
 import {
   FACTORY_PRESETS,
+  FIRST_RUN_PRESET,
+  FIRST_RUN_PRESET_SNAPSHOT,
+  FIRST_RUN_SETTINGS,
   PRESETS_KEY,
   applyPreset,
   isFactoryPreset,
@@ -172,22 +175,25 @@ export function App() {
   const [showAbout, setShowAbout] = useState(false)
   const [showPresets, setShowPresets] = useState(false)
   const [userPresets, setUserPresets] = useState<Preset[]>([])
-  const [activePresetId, setActivePresetId] = useState<string | null>(null)
+  const [activePresetId, setActivePresetId] = useState<string | null>(FIRST_RUN_PRESET.id)
   // What the loaded preset looked like when it was loaded, for the dirty flag.
-  const [presetSnapshot, setPresetSnapshot] = useState<string | null>(null)
+  const [presetSnapshot, setPresetSnapshot] = useState<string | null>(
+    FIRST_RUN_PRESET_SNAPSHOT,
+  )
   const [showControls, setShowControls] = useState(true)
   const [synthSettings, setSynthSettings] = useState<SynthSettings>(DEFAULT_SYNTH)
   const [octave, setOctave] = useState(DEFAULTS.octave)
   const [sounding, setSounding] = useState<Set<number>>(() => new Set())
 
-  const [mode, setMode] = useState<ModeId>('scope')
+  const [mode, setMode] = useState<ModeId>(FIRST_RUN_SETTINGS.mode)
   const [theme, setTheme] = useState<ThemeId>('dark')
-  const [scope, setScope] = useState<ScopeSettings>(DEFAULT_SCOPE_SETTINGS)
+  const [scope, setScope] = useState<ScopeSettings>(FIRST_RUN_SETTINGS.scope)
   const [cymatics, setCymatics] = useState<CymaticsSettings>(DEFAULT_CYMATICS_SETTINGS)
-  const [analyzer, setAnalyzer] = useState<AnalyzerSettings>(DEFAULT_ANALYZER_SETTINGS)
+  const [analyzer, setAnalyzer] = useState<AnalyzerSettings>(FIRST_RUN_SETTINGS.analyzer)
   const [scopeReadout, setScopeReadout] = useState<ScopeReadout>(EMPTY_SCOPE)
   const [cymaticsReadout, setCymaticsReadout] = useState<CymaticsReadout>(EMPTY_CYMATICS)
   const [analyzerReadout, setAnalyzerReadout] = useState<AnalyzerReadout>(EMPTY_ANALYZER)
+  const [settingsHydrated, setSettingsHydrated] = useState(false)
 
   /**
    * Single teardown path. Every listener below routes here, and it is safe to
@@ -470,14 +476,33 @@ export function App() {
 
   // --- Presets ------------------------------------------------------------
   useEffect(() => {
-    chrome.storage.sync.get(PRESETS_KEY).then((stored) => {
+    chrome.storage.sync.get([PRESETS_KEY, STORE_KEY]).then((stored) => {
       const saved = stored?.[PRESETS_KEY] as
         | Partial<{ presets: Preset[]; activeId: string | null; snapshot: string | null }>
         | undefined
-      if (!saved) return
+      if (!saved) {
+        // Presets were introduced after settings storage. An existing profile
+        // with no preset record should retain its saved view, while a genuinely
+        // new profile starts with (and remembers) Bench Classic as selected.
+        if (stored?.[STORE_KEY] !== undefined) {
+          setActivePresetId(null)
+          setPresetSnapshot(null)
+        } else {
+          chrome.storage.sync
+            .set({
+              [PRESETS_KEY]: {
+                presets: [],
+                activeId: FIRST_RUN_PRESET.id,
+                snapshot: FIRST_RUN_PRESET_SNAPSHOT,
+              },
+            })
+            .catch(() => {})
+        }
+        return
+      }
       if (Array.isArray(saved.presets)) setUserPresets(saved.presets)
-      if (typeof saved.activeId === 'string') setActivePresetId(saved.activeId)
-      if (typeof saved.snapshot === 'string') setPresetSnapshot(saved.snapshot)
+      setActivePresetId(typeof saved.activeId === 'string' ? saved.activeId : null)
+      setPresetSnapshot(typeof saved.snapshot === 'string' ? saved.snapshot : null)
     })
   }, [])
 
@@ -617,7 +642,10 @@ export function App() {
             defaults: typeof DEFAULTS
           }>
         | undefined
-      if (!saved) return
+      if (!saved) {
+        setSettingsHydrated(true)
+        return
+      }
       const was = saved.defaults
       // A profile that last used cymatics must not restore into a hidden mode.
       if (saved.mode && MODES.some((m) => m.id === saved.mode)) setMode(saved.mode)
@@ -625,10 +653,10 @@ export function App() {
       if (typeof saved.octave === 'number') setOctave(saved.octave)
       // Enabled is deliberately not restored: an extension that starts making
       // noise on open is hostile, however the setting was left.
-      setSynthSettings((prev) => ({
-        ...adopt(prev, migrateSynthSettings(saved.synth), was?.synth),
+      setSynthSettings({
+        ...adopt(DEFAULT_SYNTH, migrateSynthSettings(saved.synth), was?.synth),
         enabled: false,
-      }))
+      })
       // The dots style shipped briefly as 'tui' and then 'text'; stored
       // settings from those windows coerce forward instead of silently falling
       // to CRT.
@@ -636,13 +664,17 @@ export function App() {
         (v.displayStyle as string) === 'tui' || (v.displayStyle as string) === 'text'
           ? { ...v, displayStyle: 'dots' }
           : v
-      setScope((prev) => styled(adopt(prev, saved.scope, was?.scope)))
-      setCymatics((prev) => adopt(prev, saved.cymatics, was?.cymatics))
-      setAnalyzer((prev) => styled(adopt(prev, saved.analyzer, was?.analyzer)))
+      // Hydrate existing profiles against the normal evolving defaults, not
+      // the first-run scene above. That keeps this change first-load-only.
+      setScope(styled(adopt(DEFAULT_SCOPE_SETTINGS, saved.scope, was?.scope)))
+      setCymatics(adopt(DEFAULT_CYMATICS_SETTINGS, saved.cymatics, was?.cymatics))
+      setAnalyzer(styled(adopt(DEFAULT_ANALYZER_SETTINGS, saved.analyzer, was?.analyzer)))
+      setSettingsHydrated(true)
     })
   }, [])
 
   useEffect(() => {
+    if (!settingsHydrated) return
     const id = window.setTimeout(() => {
       chrome.storage.sync
         .set({
@@ -660,7 +692,7 @@ export function App() {
         .catch(() => {})
     }, 400)
     return () => window.clearTimeout(id)
-  }, [mode, theme, octave, synthSettings, scope, cymatics, analyzer])
+  }, [settingsHydrated, mode, theme, octave, synthSettings, scope, cymatics, analyzer])
 
   const patchSynth = useCallback(
     (next: Partial<SynthSettings>) => setSynthSettings((prev) => ({ ...prev, ...next })),

@@ -237,3 +237,16 @@ export const FACTORY_PRESETS: Preset[] = [
     },
   },
 ]
+
+/** The scene a brand-new installation opens with. Keep this explicit rather
+ * than relying on the factory-preset menu order. */
+export const FIRST_RUN_PRESET =
+  FACTORY_PRESETS.find((preset) => preset.id === 'factory_bench') ?? FACTORY_PRESETS[0]
+
+export const FIRST_RUN_SETTINGS = applyPreset(FIRST_RUN_PRESET)
+
+export const FIRST_RUN_PRESET_SNAPSHOT = presetSignature(
+  FIRST_RUN_SETTINGS.mode,
+  FIRST_RUN_SETTINGS.scope,
+  FIRST_RUN_SETTINGS.analyzer,
+)

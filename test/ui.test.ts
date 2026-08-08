@@ -1,6 +1,13 @@
 /** Small state-machine regressions that do not need a browser DOM. */
 import { HeldKeyboardNotes, HeldPointerNotes } from '../src/ui/Keyboard'
-import { applyPreset, type Preset } from '../src/sidepanel/presets'
+import {
+  FIRST_RUN_PRESET,
+  FIRST_RUN_PRESET_SNAPSHOT,
+  FIRST_RUN_SETTINGS,
+  applyPreset,
+  presetSignature,
+  type Preset,
+} from '../src/sidepanel/presets'
 import { resolveCaptureTarget, type TabTarget } from '../src/audio/capture'
 
 let failures = 0
@@ -87,6 +94,30 @@ console.log('\n--- PRESETS: legacy invisible state is discarded ---')
     'xyExposure does not survive loading',
     !('xyExposure' in applied.scope),
     'old stored field removed before dirty-state comparison',
+  )
+}
+
+console.log('\n--- PRESETS: first launch opens Bench Classic ---')
+{
+  check(
+    'Bench Classic is the first-run preset',
+    FIRST_RUN_PRESET.id === 'factory_bench' && FIRST_RUN_PRESET.name === 'Bench Classic',
+    `${FIRST_RUN_PRESET.name} (${FIRST_RUN_PRESET.id})`,
+  )
+  check(
+    'first-run settings are the applied preset',
+    JSON.stringify(FIRST_RUN_SETTINGS) === JSON.stringify(applyPreset(FIRST_RUN_PRESET)),
+    'scope and analyzer settings match the factory scene',
+  )
+  check(
+    'first-run snapshot starts clean',
+    FIRST_RUN_PRESET_SNAPSHOT ===
+      presetSignature(
+        FIRST_RUN_SETTINGS.mode,
+        FIRST_RUN_SETTINGS.scope,
+        FIRST_RUN_SETTINGS.analyzer,
+      ),
+    'preset menu will not show a false dirty marker',
   )
 }
 
